@@ -17,6 +17,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install "matplotlib==3.9.2" "numpy<2.2" "pandas<2.3" "scipy<1.15" "seaborn==0.13.2" \
                       "pyyaml==6.0.2" "pytest==8.3.3" "statsmodels==0.14.4" "scikit-learn==1.5.2"
-      # Tests that need scipilot-medimg-figure-skill (a separate skill) are skipped when it is absent.
+      # medfig-render calls the scripts of scipilot-medimg-figure-skill (a separate skill, MIT). CI uses
+      # the upstream scipilot-figure-skill scripts at the derivation baseline 43098dd at the default path.
+      - name: Install scipilot scripts
+        run: |
+          git clone -q https://github.com/Haojae/scipilot-figure-skill.git /tmp/scipilot
+          git -C /tmp/scipilot checkout -q 43098dd
+          mkdir -p ~/.claude/skills/scipilot-medimg-figure-skill
+          cp -r /tmp/scipilot/scripts ~/.claude/skills/scipilot-medimg-figure-skill/
+      - name: Install fonts
+        run: |
+          echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections
+          sudo apt-get update -qq && sudo apt-get install -y -qq ttf-mscorefonts-installer fonts-dejavu-core
+          rm -rf ~/.cache/matplotlib
       - name: Run tests
         run: python -m pytest -q -p no:cacheprovider
