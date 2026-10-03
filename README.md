@@ -1,6 +1,6 @@
 # medfig 技能集合
 
-[![tests](https://github.com/OWNER/medfig-skills/actions/workflows/tests.yml/badge.svg)](https://github.com/OWNER/medfig-skills/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![tests](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml/badge.svg)](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 面向医学 / 临床 AI 论文的图表技能，共四个，装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
 
@@ -28,7 +28,7 @@
 ## 安装 / 更新 / 卸载
 
 ```bash
-git clone https://github.com/OWNER/medfig-skills.git
+git clone https://github.com/yubinfengjjd/medfig-skills.git
 cd medfig-skills
 python install.py
 ```
