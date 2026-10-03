@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+examples_out/
+medfig-render/examples/minimal/out/
+medfig-render/examples/minimal/data/
+medfig-render/examples/gallery/out/
+tests/leak_strings.local.txt

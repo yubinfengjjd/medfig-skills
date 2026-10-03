@@ -1,0 +1,24 @@
+# Minimal synthetic figkit project. All paths are relative to this file.
+# scipilot_scripts is left at its default (the installed scipilot-medimg-figure-skill scripts).
+project_root = "."
+data_root = "data"
+out_dir = "out"
+journal = "nature"
+
+[palettes.method.model_a]
+color = "#0072B2"
+marker = "o"
+label = "Model A"
+
+[palettes.method.model_b]
+color = "#D55E00"
+marker = "D"
+label = "Model B"
+
+[palettes.class.normal]
+color = "#009E73"
+marker = "o"
+
+[palettes.class.lesion]
+color = "#CC79A7"
+marker = "^"

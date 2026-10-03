@@ -1,0 +1,62 @@
+# Panel gallery: one synthetic recipe per panel type. Copy a recipe + the palettes it uses into a project.
+# All data are generated in memory (seeded); data_root is required by figkit but nothing is read from it.
+project_root = "."
+data_root = "."
+out_dir = "out"
+journal = "nature"
+
+# models compared in curve recipes (Tol bright; colour + linestyle redundancy)
+[palettes.model.model_a]
+color = "#AA3377"
+linestyle = "-"
+marker = "o"
+label = "Model A"
+[palettes.model.model_b]
+color = "#4477AA"
+linestyle = "--"
+marker = "s"
+label = "Model B"
+[palettes.model.model_c]
+color = "#228833"
+linestyle = ":"
+marker = "^"
+label = "Model C"
+
+# cohorts (Okabe-Ito)
+[palettes.cohort.site_a]
+color = "#0072B2"
+marker = "o"
+label = "Site A"
+[palettes.cohort.site_b]
+color = "#D55E00"
+marker = "s"
+label = "Site B"
+[palettes.cohort.site_c]
+color = "#009E73"
+marker = "^"
+label = "Site C"
+
+# hypothesis / result status (scorecard)
+[palettes.status.supported]
+color = "#009988"
+marker = "^"
+label = "Supported"
+[palettes.status.inconclusive]
+color = "#004488"
+marker = "o"
+label = "Inconclusive"
+[palettes.status.not_supported]
+color = "#BB5566"
+marker = "s"
+label = "Not supported"
+
+# conformal set sizes (light -> dark, Tol muted)
+[palettes.setsize."1"]
+color = "#DDCC77"
+label = "1 class"
+[palettes.setsize."2"]
+color = "#CC6677"
+label = "2 classes"
+[palettes.setsize."3"]
+color = "#882255"
+label = "3 classes"

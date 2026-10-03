@@ -1,0 +1,67 @@
+# figkit.toml -- one per project, at the project root. figkit reads every path from here.
+# Relative paths: project_root resolves against the folder holding this file; all other paths
+# resolve against project_root.
+
+# Project root (default ".").
+project_root = "."
+
+# REQUIRED. Read-only results root: io.Reader refuses any path that escapes it (ValueError).
+data_root = "results"
+
+# Output root (default "out"): figures -> out/figures/<kind>/, standalone panels -> out/panels/<name>/.
+out_dir = "out"
+
+# Whitelist for Reader.external(): a second, explicitly approved source dir (default []).
+# Only .csv / .json / .md / .txt are read from here; keep it empty unless a ruling allows it.
+external_dirs = []
+
+# Journal preset passed to scipilot setup_style (default "nature"; e.g. "science", "ieee", "general").
+journal = "nature"
+# Visual theme: "default" (house style) or "soft" (light tint fills + saturated same-hue edges, one hatch per
+# method; look after figures4papers). Every QA gate is the same for both. Sizes: see figkit.journals.
+theme = "default"
+
+# scipilot-medimg-figure-skill scripts dir (default below). Must contain setup_style.py,
+# export_figure.py, check_figure.py, visual_qa.py and layout_tools.py; a clear error is raised if missing.
+scipilot_scripts = "~/.claude/skills/scipilot-medimg-figure-skill/scripts"
+
+# Banned words (figures, tables, captions share ONE project list). Default list: qa.BANNED =
+# validated, superior, clinical benefit, UMAP, deployment, diagnostic, clinically proven.
+# banned_extra adds project words; banned_allow lifts default words this paper legitimately uses
+# (e.g. "UMAP" when UMAP is the method, "diagnostic" for a diagnostic-accuracy study). Keep both
+# empty unless the figure spec says otherwise. [qa] must stay above the [palettes.*] tables.
+[qa]
+banned_extra = []
+banned_allow = []
+# Colour-clash gate (qa.palette_clash): two different data colours in one axes closer than this CIEDE2000
+# value fail export. Default 12; fix clashes by changing a palette colour, not by lowering this.
+# palette_min_delta_e = 12
+# Internal codes that must never reach a figure or table (case-sensitive regex, word boundaries), e.g.
+# endpoint / hypothesis / rule numbers and raw column names. Checked by qa.figure_text_audit / forbidden_in_text.
+# forbidden_patterns = ['\bE[12]\b', '\bH[1-5]\b', 'fluid_\w+']
+# Default caveat phrases (qa.FIGURE_CAVEATS keys) this project may show inside figures; normally empty.
+# caveat_allow = []
+
+# Palettes: one table per semantic (cohort, class, ...). Never reuse a colour across semantics.
+# Keys per entry: color (required, saturated -- S3), marker, label, edge (outline for light colours).
+# style.palette("cohort") returns this table; curves.step_ladder uses "cohort" by default.
+[palettes.cohort.site_a]
+color = "#0072B2"
+marker = "o"
+label = "Site A"
+
+[palettes.cohort.site_b]
+color = "#F0E442"
+marker = "s"
+label = "Site B"
+edge = "#8C7A00"
+
+[palettes.class.normal]
+color = "#009E73"
+marker = "o"
+label = "Normal"
+
+[palettes.class.lesion]
+color = "#D55E00"
+marker = "^"
+label = "Lesion"
