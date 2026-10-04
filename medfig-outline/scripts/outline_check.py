@@ -232,6 +232,58 @@ def check(outline_path, project, figkit_toml=None):
                         if re.search(p, bare)]
                 if cfg is not None:
                     out += [f"{where}: project code pattern {p!r}" for p in qa.forbidden_in_text(bare, cfg)]
+    # ---- style: an outline is writing guidance, not a data dump (references/outline_format.md §5)
+    out += _style(o)
+    return out
+
+
+STYLE = dict(point_max_chars=70, point_max_numbers=2, paragraph_max_points=3, paragraph_max_numbers=4,
+             section_max_paragraphs=3, opener_max_repeat=2)
+OPENER = re.compile(r"^\s*(引用|根据|如|见)\s*(?:Fig|S|ST|T)\s?\d", re.I)
+
+
+def _style(o):
+    """Length / density / repetition limits; thresholds overridable with a top-level ``style:`` block."""
+    lim = {**STYLE, **(o.get("style") or {})}
+    out = []
+    allow_all = set(o.get("allow_numbers", []))
+
+    def nums(t):
+        # a range "0.929–0.938" / "0.917 至 0.941" counts as one number
+        t = re.sub(r"(\d)\s*(?:–|—|至|到|~)\s*[+−-]?(?=\d)", r"\1 ", _strip_refs(t))
+        t = re.sub(r"(\d[\d.,]*%?) (\d[\d.,]*%?)", r"\1", t)
+        return [m for m in NUM.findall(t) if m not in allow_all
+                and not (m.rstrip("%").replace(",", "").isdigit() and len(m.rstrip("%").replace(",", "")) <= 1)]
+
+    for kind, secs in (("Methods", o.get("methods", [])), ("Results", o.get("results", []))):
+        for sec in secs:
+            blocks = ([(p.get("label", ""), p.get("points", [])) for p in sec.get("paragraphs", [])] if kind == "Results"
+                      else [(b.get("topic", ""), b.get("points", [])) for b in sec.get("focus", [])])
+            if kind == "Results" and len(blocks) > lim["section_max_paragraphs"]:
+                out.append(f"style: Results {sec['id']} has {len(blocks)} paragraphs (max {lim['section_max_paragraphs']}; "
+                           "merge or move detail to the figure caption)")
+            openers = {}
+            for label, pts in blocks:
+                if len(pts) > lim["paragraph_max_points"]:
+                    out.append(f"style: {kind} {sec['id']} {label}: {len(pts)} points (max {lim['paragraph_max_points']})")
+                if kind == "Results" and sum(len(nums(t)) for t in pts) > lim["paragraph_max_numbers"]:
+                    out.append(f"style: {kind} {sec['id']} {label}: {sum(len(nums(t)) for t in pts)} numbers "
+                               f"(max {lim['paragraph_max_numbers']}; keep the key ones, point to the table for the rest)")
+                for t in pts:
+                    if len(t) > lim["point_max_chars"]:
+                        out.append(f"style: {kind} {sec['id']} {label}: point is {len(t)} chars (max "
+                                   f"{lim['point_max_chars']}; one instruction per point): {t[:30]}…")
+                    if kind == "Results" and len(nums(t)) > lim["point_max_numbers"]:
+                        out.append(f"style: {kind} {sec['id']} {label}: {len(nums(t))} numbers in one point (max "
+                                   f"{lim['point_max_numbers']}): {t[:30]}…")
+                    if OPENER.match(t):
+                        out.append(f"style: {kind} {sec['id']} {label}: point opens with a citation ({t[:12]}…); "
+                                   "start with what to write (说明 / 对比 / 强调 …), put the citation in cites")
+                    k = t.strip()[:2]
+                    openers[k] = openers.get(k, 0) + 1
+            for k, n in openers.items():
+                if n > lim["opener_max_repeat"] + 1:
+                    out.append(f"style: {kind} {sec['id']}: {n} points start with {k!r}; vary the wording")
     return out
 
 

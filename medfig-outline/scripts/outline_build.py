@@ -33,6 +33,32 @@ def _refs(sec, results):
     return list(dict.fromkeys(figs)), list(dict.fromkeys(tabs))
 
 
+def _label(p):
+    return p["label"] + ("（可选）" if p.get("optional") else "")
+
+
+def _pretty_ref(r):
+    """'Fig4a' -> 'Fig 4a', 'S5a' -> 'Fig S5a', 'ST05' -> 'Table S5', 'T2' -> 'Table 2'."""
+    m = re.match(r"^(Fig|S)(\d+)(.*)$", r)
+    if m:
+        return f"Fig {'S' if m.group(1) == 'S' else ''}{int(m.group(2))}{m.group(3)}"
+    m = re.match(r"^(ST|T)(\d+)$", r)
+    if m:
+        return f"Table {'S' if m.group(1) == 'ST' else ''}{int(m.group(2))}"
+    return r
+
+
+def _cite_tail(p):
+    return f"（{'、'.join(_pretty_ref(c) for c in p['cites'])}）" if p.get("cites") else ""
+
+
+def _code_roles(code):
+    """[(role, '`a.py`、`b.py`（推测）')] in 计算 / 绘图 / 表格 order: one line per role, not one per file."""
+    roles = ROLE_ORDER + sorted({c.get("role", "") for c in code} - set(ROLE_ORDER))
+    return [(r, "、".join(f"`{_code_line(c)}`" for c in code if c.get("role", "") == r))
+            for r in roles if any(c.get("role", "") == r for c in code)]
+
+
 def _code_line(c):
     path = c.get("path") or "TODO"
     return f"{path}（推测）" if c.get("guess") else path
@@ -55,20 +81,12 @@ def to_md(o):
     for sec in o.get("results", []):
         L += [f"## {sec['id']} {sec['title']}", "", f"（{sec['subtitle']}）", "", "**写作要点**", ""]
         for p in sec.get("paragraphs", []):
-            lab = p["label"] + ("（可选）" if p.get("optional") else "")
-            L.append(f"- **{lab}**：{p.get('claim', '')}")
+            L.append(f"- **{_label(p)}**：{p.get('claim', '')}{_cite_tail(p)}")
             L += [f"  - {t}" for t in p.get("points", [])]
-            if p.get("cites"):
-                L.append(f"  - 引用：{'、'.join(p['cites'])}")
         if sec.get("items"):
             L += ["", "**图 / 表**", ""] + [f"- {i['ref']}：{i.get('what', '')}" for i in sec["items"]]
         if sec.get("code"):
-            L += ["", "**相关代码**", ""]
-            for role in ROLE_ORDER + sorted({c.get("role", "") for c in sec["code"]} - set(ROLE_ORDER)):
-                cs = [c for c in sec["code"] if c.get("role", "") == role]
-                if cs:
-                    L.append(f"- {role}：")
-                    L += [f"  - `{_code_line(c)}`" for c in cs]
+            L += ["", "**相关代码**", ""] + [f"- {role}：{line}" for role, line in _code_roles(sec["code"])]
         if sec.get("boundaries"):
             L += ["", "**措辞边界**", ""] + [f"- {t}" for t in sec["boundaries"]]
         L.append("")
@@ -130,25 +148,21 @@ def to_docx(o, path):
         para(f"（{sec['subtitle']}）", size=11)
         para("写作要点", bold=True)
         for p in sec.get("paragraphs", []):
-            para(p["label"] + ("（可选）" if p.get("optional") else "") + "：", level=1, bold=True)
-            if p.get("claim"):
-                para(p["claim"], level=2)
+            # one line per paragraph: bold label + the claim + where it is shown; points follow as plain lines
+            q = d.add_paragraph()
+            q.paragraph_format.left_indent = Cm(0.74)
+            q.add_run(_label(p) + "：").bold = True
+            q.add_run(p.get("claim", "") + _cite_tail(p))
             for t in p.get("points", []):
-                para(t, level=3)
-            if p.get("cites"):
-                para("引用：" + "、".join(p["cites"]), level=3)
+                para(t, level=2)
         if sec.get("items"):
             para("图 / 表", bold=True)
             for i in sec["items"]:
                 para(f"{i['ref']}：{i.get('what', '')}", level=1)
         if sec.get("code"):
             para("相关代码", bold=True)
-            for role in ROLE_ORDER + sorted({c.get("role", "") for c in sec["code"]} - set(ROLE_ORDER)):
-                cs = [c for c in sec["code"] if c.get("role", "") == role]
-                if cs:
-                    para(f"{role}：", level=1)
-                    for c in cs:
-                        para(f"`{_code_line(c)}`", level=2)
+            for role, line in _code_roles(sec["code"]):
+                para(f"{role}：{line}", level=1)
         if sec.get("boundaries"):
             para("措辞边界", bold=True)
             for t in sec["boundaries"]:

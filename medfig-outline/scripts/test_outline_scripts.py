@@ -176,3 +176,44 @@ def test_number_forms():
     assert m("92.7%", 0.927318) and m("13,859", 13859)
     assert m("0.047", -0.0472, magnitude=True) and not m("0.047", -0.0472)  # "低约 0.047" = magnitude
     assert outline_check.NUM.findall("P = 1/3，差值 +0.00127") == ["1/3", "+0.00127"]
+
+
+def test_style_limits(proj, tmp_path):
+    o = _outline()
+    p = o["results"][0]["paragraphs"][0]
+    p["points"] = ["点出 AUC 约 0.983", "交代 n = 13,859", "说明另一点", "第四条要点"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("4 points (max 3)" in i for i in out)
+    p["points"] = ["引用 Fig 2a：说明骨干层可分"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("opens with a citation" in i for i in out)
+    p["points"] = ["说明" + "很长的要点" * 20]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("chars (max 70" in i for i in out)
+    o["style"] = {"point_max_chars": 200}
+    assert not any("chars (max" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+def test_style_numbers_per_point_and_paragraph(proj, tmp_path):
+    o = _outline()
+    o["numbers"] += [{"text": "0.98", "source": "fig2.source.json:values.auc.all"}]
+    o["results"][0]["paragraphs"][0]["points"] = ["对比 0.983、0.98 与 13,859"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("3 numbers in one point" in i for i in out)
+
+
+def test_build_puts_citation_on_the_paragraph_line(proj, tmp_path):
+    o = _outline()
+    res = outline_build.build(_write(tmp_path, o), proj, tmp_path / "o3")
+    import docx
+    text = [p.text for p in docx.Document(res["docx"]).paragraphs]
+    assert "第一段：骨干层面队列可区分（Fig 2a-b、Table 1）" in text
+    assert not any(t.startswith("引用：") for t in text)
+    assert "绘图：figures/main/fig2.py" in text
+
+
+def test_style_range_counts_as_one_number(proj, tmp_path):
+    o = _outline()
+    o["numbers"] += [{"text": "0.98", "source": "fig2.source.json:values.auc.all"}]
+    o["results"][0]["paragraphs"][0]["points"] = ["点出范围 0.98–0.983，n = 13,859"]
+    assert not any("numbers in one point" in i for i in outline_check.check(_write(tmp_path, o), proj))
