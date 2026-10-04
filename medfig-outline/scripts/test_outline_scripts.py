@@ -42,6 +42,7 @@ def proj(tmp_path):
 def _outline(**over):
     o = {
         "project": "demo", "figures_root": "out/figures", "tables_root": "out/tables",
+        "results_fewer_sections_reason": "synthetic two-figure project",
         "captions": ["docs/captions_zh.md", "docs/captions"], "main_figures": ["fig2", "fig3"],
         "methods": [{"id": "2.1", "title": "Cohorts and evaluation", "short": "Cohorts",
                      "focus": [{"topic": "研究设计", "points": ["多中心回顾性研究；三分类（内部代号 E2）", "说明外部队列不参与训练"]}],
@@ -273,5 +274,15 @@ def test_mechanical_one_figure_per_section_is_flagged(proj, tmp_path):
     o["main_figures"] = ["fig3"]
     out = outline_check.check(_write(tmp_path, o), proj)
     assert any("same number of sections" in i for i in out)
-    o["results"] = [dict(sec, id=f"3.{k}", short=f"S{k}") for k in range(1, 7)]
-    assert any("6 top-level Results sections" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+def test_results_section_count_range(proj, tmp_path):
+    o = _outline()
+    del o["results_fewer_sections_reason"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("only 2 top-level Results sections (aim for 5-8)" in i for i in out)
+    o["results_fewer_sections_reason"] = "两步论证：先性能后机制"
+    assert not any("top-level Results sections" in i for i in outline_check.check(_write(tmp_path, o), proj))
+    sec = o["results"][1]
+    o["results"] = [dict(sec, id=f"3.{k}", short=f"S{k}") for k in range(1, 10)]
+    assert any("9 top-level Results sections (max 8)" in i for i in outline_check.check(_write(tmp_path, o), proj))

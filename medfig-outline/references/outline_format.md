@@ -142,7 +142,7 @@ results:
 ```
 
 - **Methods 顺序**：数据 → 模型结构 → 训练过程（按阶段拆小节）→ 评估与统计 → 附加分析。节数由内容决定。
-- **Results**：3–5 个大节（`style.results_max_sections`，默认 5），每节回答一个问题；一节可用多张图，一张图的 panel 可分到不同节。
+- **Results**：5–8 个大节（`style.results_min_sections` / `results_max_sections`，默认 5 / 8），每节回答一个问题；一节可用多张图，一张图的 panel 可分到不同节。少于 5 节时在顶层写 `results_fewer_sections_reason: <课题思路为什么只需要这么几节>`，否则报错。
 - 父节可以只有标题（内容全在小节里），也可以有一句总述段落。
 - 检查脚本报错的平铺信号：Methods 与 Results 节数相同且每个 Results 节恰好一张主图；只有一个小节；末级节少于 2 条要点；小节编号不在父节之下。
 - 没有文档依据、只从代码 / 配置推断的细节，要点末尾标"（待核）"。

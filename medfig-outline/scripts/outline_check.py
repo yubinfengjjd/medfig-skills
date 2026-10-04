@@ -90,6 +90,10 @@ def _structure(o, lim):
     if len(R) > lim["results_max_sections"]:
         out.append(f"structure: {len(R)} top-level Results sections (max {lim['results_max_sections']}); group them "
                    "by the argument and use subsections")
+    if R and len(R) < lim["results_min_sections"] and not str(o.get("results_fewer_sections_reason", "")).strip():
+        out.append(f"structure: only {len(R)} top-level Results sections (aim for {lim['results_min_sections']}-"
+                   f"{lim['results_max_sections']}); split over-merged sections, or state why the study's argument "
+                   "needs fewer in results_fewer_sections_reason")
     if len(M) == len(R) and len(R) >= 4 and all(len(_main_figs_in(s, main)) == 1 for s in R):
         out.append("structure: Methods and Results have the same number of sections and every Results section is "
                    "one figure -- plan Results by the argument (one section may use several figures)")
@@ -293,7 +297,7 @@ def check(outline_path, project, figkit_toml=None):
 
 
 STYLE = dict(point_max_chars=70, point_max_numbers=2, paragraph_max_points=3, paragraph_max_numbers=4,
-             section_max_paragraphs=3, opener_max_repeat=2, results_max_sections=5)
+             section_max_paragraphs=3, opener_max_repeat=2, results_min_sections=5, results_max_sections=8)
 OPENER = re.compile(r"^\s*(引用|根据|如|见)\s*(?:Fig|S|ST|T)\s?\d", re.I)
 
 
