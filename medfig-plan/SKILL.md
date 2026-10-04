@@ -37,6 +37,7 @@ description: Use when the user needs to plan a set of medical research figures o
 - `references/table_plan.md`：主表、附表、口径裁决表、来源索引
 - `references/spec_template.md`：规格文件模板
 - `references/lessons.md`：经验规则（A/D/E 编号）
+- `references/mainline_rules.md`：只呈现主线版本——早期版本与开发史不进图、表、图注、写作大纲（全部 medfig 技能共用）
 
 ## 第 1 步：盘点结果资产（派子代理）
 
@@ -62,11 +63,12 @@ description: Use when the user needs to plan a set of medical research figures o
 2. 主图数量上限（期刊限制或用户偏好）。
 3. 语言：图内文字（默认英文）；规格、图注草稿、交付说明用什么语言。
 4. 叙事顺序：主线结论是什么，主图按什么论证顺序排。
-5. 探索性结果去向：post-outcome / exploratory 结果放主图还是附图；预注册结果（含阴性）放哪里（A5, E5）。
-6. 示意图处理：研究设计图 / 流程图记为"示意图（外部绘制，本套不出图）"并在规格正文写内容描述，或删除并列入偏离；不渲染占位 panel（S2）。
-7. 口径冲突：把第 1 步冲突清单逐条列出，请用户裁决，或请用户指定一份权威文档，之后一律以它为准（A8）。
+5. **版本与开发史**：哪一个模型 / 分析版本是主线；哪些早期版本、失败的旧方案、内部开发阶段（如 wave、closure、修复前后）被**丢弃**。丢弃的版本在所有图、表、图注和写作大纲里都不出现，也不当作对照或补充实验（细则见 `references/mainline_rules.md`）；按内部计划组织的分析（如"预注册假设 H1–H5"）改成按它回答的科学问题组织。结果写进规格 §0。
+6. 探索性结果去向：探索性结果放主图还是附图。图注和表题里不写"post-outcome exploratory"之类的开发流程说明，探索性质只在稿件 Methods 的统计部分用标准写法交代一次。
+7. 示意图处理：研究设计图 / 流程图记为"示意图（外部绘制，本套不出图）"并在规格正文写内容描述，或删除并列入偏离；不渲染占位 panel（S2）。
+8. 口径冲突：把第 1 步冲突清单逐条列出，请用户裁决，或请用户指定一份权威文档，之后一律以它为准（A8）。
 
-用户未答的项写进规格的"待确认"节，不得擅自假定。
+用户未答的项写进规格的"待确认"节，不得擅自假定。用户已经回答过的问题不再重复提问。
 
 ## 第 3 步：逐 panel 规划
 
@@ -98,7 +100,7 @@ description: Use when the user needs to plan a set of medical research figures o
 - 主题：figkit.toml `theme = "default"`（默认）或 `"soft"`（一主多淡、平涂、柱顶数值，风格参考 senlanke/figures4papers）；同一套图只用一个主题，写进规格 §2。
 - 期刊规格从 `figkit.journals` 取（来源、核对日期、VERIFIED / ESTIMATED）；ESTIMATED 条目投稿前到官网确认，写进规格"待确认"。
 - 图内文字只放结果与读图编码：轴名、刻度、类别名、数值、n、图例，以及"实心 = 在集合内""色带 = seed 最小–最大值"这类读图必需的编码说明。免责声明（illustrative / not a clinical report）、方法口径（unweighted、seed-0 calibration、by construction）、结论句、限制声明、交叉引用（Table 6、Fig. 3）一律进图注，不画在图里，也不加图底注释行（`fig.text`）。
-- 内部代号不进图：终点 / 假设 / 设计 / 规则编号（E1、H3、R2、D4、Wave-1）、数据列名（fluid_irf）一律换成读者能懂的描述名，规格 §2 写"内部代号 → 图内名称"对照表，并把这些代号写成 `figkit.toml` 的 `[qa] forbidden_patterns`，导出时硬拦。图注可以写"（即预注册假设 H1）"便于对照正文。只表示出处的运行编号（"(seed 0)"）进图注；多个 seed 并排比较时才在图里出现 Seed 0/1/2。
+- 内部代号不进图：终点 / 假设 / 设计 / 规则编号（E1、H3、R2、D4、Wave-1）、数据列名（fluid_irf）一律换成读者能懂的描述名，规格 §2 写"内部代号 → 图内名称"对照表，并把这些代号和丢弃版本的名称写成 `figkit.toml` 的 `[qa] forbidden_patterns`，导出时硬拦；开发史通用词（wave、closure、repair、pre-registered、earlier version 等）由 figkit 默认拦截。图注同样不写内部代号和开发史。只表示出处的运行编号（"(seed 0)"）进图注；多个 seed 并排比较时才在图里出现 Seed 0/1/2。
 - 图内数值按统一精度显示（规格 §2 写明，例如 3 位小数或 3 位有效数字），不出现原始浮点输出（+0.001268）。
 
 图型选择查 `references/chart_diversity.md`；字段与版式细则见 `references/panel_rules.md`。
@@ -123,9 +125,10 @@ description: Use when the user needs to plan a set of medical research figures o
 2. 矛盾扫描：同一数字、定义、n 在规格各处一致，且与口径裁决表一致。
 3. 歧义扫描：每个 data 字段能唯一定位到文件与列；变换写明且确定性。
 4. 范围扫描：主图数 ≤ 用户上限；森林类 ≤ 3 处且每处有理由；每个结果要么有 panel、要么有表、要么在"不出图"清单里写明原因。
-5. 措辞扫描：图注要求里包含探索性声明（按项目）、限制声明，不使用禁用词（validated、superior、clinical benefit、diagnostic、clinically proven、deployment 等；项目可在 `figkit.toml` 的 `[qa]` 用 `banned_extra` 追加、`banned_allow` 放行默认词）（E1–E6）。
+5. 措辞扫描：图注要求里包含限制声明，不写开发史和逐图的探索性声明（探索性质只在稿件 Methods 交代一次，`references/mainline_rules.md`），不使用禁用词（validated、superior、clinical benefit、diagnostic、clinically proven、deployment 等；项目可在 `figkit.toml` 的 `[qa]` 用 `banned_extra` 追加、`banned_allow` 放行默认词）（E1–E6）。
 5a. 数据与冗余自检：运行 `python medfig-plan/scripts/data_health.py <数据文件...>` 生成数据体检单（缺失、重复行、每组 n、常数列），把发现写进规格 §1；规格写完后运行 `python medfig-plan/scripts/spec_check.py <规格.md>`：同一图内两个 panel 的 claim 相同、同一份 data 画两种 chart、缺字段（含 counterfactual）都会报出来，逐条处理或在 reason 里说明。
 5b. 图内文字扫描：每个 panel 的 chart 字段里写的图内文字（标题、轴名、图例、注释）只含结果与读图编码；没有免责声明、口径、结论句、交叉引用和内部代号；代号对照表覆盖规格里出现的每个代号。
+5c. 版本扫描：没有任何 panel、表或图注用到 §0 版本清单里的丢弃项；没有按内部计划编号组织的行（`references/mainline_rules.md`）。
 6. 偏离清单：所有降级、合并、删除、示意图外部绘制都列出（E8）。
 7. 样式扫描（S1–S5，见 `references/panel_rules.md` §6）：影像列 width_ratios 按图像宽高比、左右留白 ≤ 15%；无纯文字 panel；每 panel 数据图元有 Okabe-Ito 色且方法色不撞队列色；每 panel 写明 panel_file（单独 PDF（必需）+ SVG，无 a/b/c）；ROC 为共同 FPR 网格 mean ± SD 样式。
 

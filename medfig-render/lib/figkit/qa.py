@@ -164,6 +164,20 @@ FIGURE_CAVEATS = {
 # Cross-references: a figure must not point at tables / figures (that is the caption's job).
 CROSS_REF = re.compile(r"\b(?:(?:Supplementary|Extended Data)\s+)?(?:Fig(?:ure)?s?\.?|Tables?)\s*S?\d+[a-z]?\b",
                        flags=re.I)
+# Development history (medfig-plan references/mainline_rules.md): earlier versions are discarded and analyses
+# are organised by scientific question, so these never reach a figure. Case-insensitive; a project lifts one
+# with [qa] caveat_allow = [key] only when the word is part of a genuine method name.
+DEV_HISTORY = {
+    "pre-registered": r"\bpre-?regist(?:ered|ration)\b",
+    "hypothesis status": r"\bhypothes(?:is|es) status\b",
+    "closeout": r"\bclose-?out\b",
+    "closure": r"\bclosure\b",
+    "wave": r"\bwave[- ]?\d\b",
+    "earlier version": r"\b(?:earlier|previous|old|legacy|historical) (?:version|model|anchor|pipeline)\b",
+    "repair": r"\brepair(?:ed)?\b",
+    "post-outcome": r"\bpost-?outcome\b",
+    "reconciliation": r"\breconcil(?:ed|iation)\b",
+}
 
 
 def _cfg_or_active(cfg):
@@ -177,6 +191,17 @@ def caveat_patterns(cfg=None):
     """{key: regex} of FIGURE_CAVEATS minus ``[qa] caveat_allow`` (active config by default)."""
     allow = {w.lower() for w in getattr(_cfg_or_active(cfg), "caveat_allow", None) or []}
     return {k: v for k, v in FIGURE_CAVEATS.items() if k.lower() not in allow}
+
+
+def dev_history_patterns(cfg=None):
+    """{key: regex} of DEV_HISTORY minus ``[qa] caveat_allow``."""
+    allow = {w.lower() for w in getattr(_cfg_or_active(cfg), "caveat_allow", None) or []}
+    return {k: v for k, v in DEV_HISTORY.items() if k.lower() not in allow}
+
+
+def dev_history_in_text(text, cfg=None):
+    """Development-history keys found in a plain string (tables, captions, outlines)."""
+    return [k for k, p in dev_history_patterns(cfg).items() if re.search(p, str(text), flags=re.I)]
 
 
 def forbidden_in_text(text, cfg=None):
@@ -218,6 +243,8 @@ def figure_text_audit(fig, cfg=None):
             continue
         seen.add(s)
         out += [f"caveat {k!r} in {s!r}" for k, p in cav.items() if re.search(p, s, flags=re.I)]
+        out += [f"development history {k!r} in {s!r} (earlier versions / internal plan names never reach a "
+                "figure; see medfig-plan references/mainline_rules.md)" for k in dev_history_in_text(s, cfg)]
         if CROSS_REF.search(s):
             out.append(f"cross-reference in {s!r}")
         out += [f"project pattern {p!r} in {s!r}" for p in forbidden_in_text(s, cfg)]

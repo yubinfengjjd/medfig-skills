@@ -91,7 +91,7 @@ if __name__ == "__main__":
    - `qa.whitespace_audit`（S1）：任一 panel 内容左右空白合计 > 单元宽度 15%
    - `qa.text_only_panel`（S2）：只有文字、没有数据图元的 axes（参考线、`style.aux` 元素不算数据）
    - `qa.colour_audit`（S3）：数据图元只用黑白灰（饱和度 ≤ 0.15），或数据热图用灰色 cmap
-   - `qa.figure_text_audit`：图内文字只放结果与读图编码。报错项：图级自由文字（`fig.text` 注释行、`suptitle`；panel 序号和 `supxlabel/supylabel` 除外）、免责 / 口径措辞（`qa.FIGURE_CAVEATS`：illustrative、not a clinical、not used for、by construction、descriptive、not a CI、retrospective、exploratory ...，项目可用 `[qa] caveat_allow` 放行）、交叉引用（Table 6、Fig. 3b、Supplementary Fig. S2）、项目代号（`[qa] forbidden_patterns` 正则，例如 `\bE[12]\b`）。修法是把这句话挪进图注、代号换描述名，不是放行
+   - `qa.figure_text_audit`：图内文字只放结果与读图编码。报错项：图级自由文字（`fig.text` 注释行、`suptitle`；panel 序号和 `supxlabel/supylabel` 除外）、免责 / 口径措辞（`qa.FIGURE_CAVEATS`：illustrative、not a clinical、not used for、by construction、descriptive、not a CI、retrospective、exploratory ...，项目可用 `[qa] caveat_allow` 放行）、交叉引用（Table 6、Fig. 3b、Supplementary Fig. S2）、项目代号（`[qa] forbidden_patterns` 正则，例如 `\bE[12]\b`）、开发史（`qa.DEV_HISTORY`：pre-registered、hypothesis status、closeout、closure、wave-N、earlier / historical version、repair、post-outcome、reconciliation；只有真实方法名才用 `[qa] caveat_allow` 放行）。修法是把这句话挪进图注、代号换描述名、丢弃版本直接删掉，不是放行
    - `qa.palette_clash`（S3）：同一 axes 里两种不同数据色几乎同色（ΔE00 < 12，可在 `[qa] palette_min_delta_e` 调）。修法是换色板颜色（用 `style.delta_e` 和图内每个颜色比），不是调低阈值
 3. scipilot `export_figure`：`<out_dir>/figures/<kind>/<name>.{pdf,svg,png}` + `_grayscale.png`（600 dpi），再逐个 `check_figure`，FAIL 时删除已写文件并抛错。
 4. S4：每个 `mark_panel` 过的 panel 另存 `<out_dir>/panels/<name>/<name>_<id>.{pdf,svg}`，fonttype 42、文字可选、尺寸与组图中一致、隐藏 a/b/c 序号；缺失即 FAIL 并删除组图。
@@ -145,7 +145,7 @@ curves.roc_mean_sd(ax, curves_b, label="Model B", kind="curve")   # 已算好的
 
 详见 `references/caption_rules.md`。草稿由 `caption(prov)` 从 provenance 生成（模板已有示例），写到 `source.json` 旁的 `<name>.caption.md`。
 
-- 研究性质声明：按项目写，例如 post-outcome exploratory、没有前瞻性独立验证队列。
+- 研究性质与开发史：图注不逐图写探索性声明，不写开发流程，不出现早期版本（只呈现主线，见 `medfig-plan/references/mainline_rules.md`）；探索性质在稿件 Methods 交代一次。
 - 适用限制：共享成分不是独立复现、两类队列不称三分类验证、预测轮廓、CAM 共享色阶、概率图重采样、缺像素间距不画比例尺、单次 ROC。
 - 禁用词：默认 validated, superior, clinical benefit, UMAP, deployment, diagnostic, clinically proven。项目只在 `figkit.toml` 里调整：`[qa] banned_extra = [...]` 追加，`[qa] banned_allow = [...]` 放行默认词（如确实使用 UMAP、报告 diagnostic accuracy 的论文）。图、表、图注共用这一张项目表，用 `qa.banned_in_text(text)` 检查，命中即抛错。
 - 方法描述（约束、归一化、校准方式）要能追溯到当前运行配置。

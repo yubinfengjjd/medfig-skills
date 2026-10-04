@@ -124,10 +124,10 @@ def caption(prov):
         f"{r['to'][0]}×{r['to'][1]} pixels ({r['method']}); fixed colour scale 0–1. "
         f"b, ROC curves: {'; '.join(parts)}; shaded band = ±1 SD across runs, not a confidence "
         "interval. "
-        f"c, Row-normalised confusion matrix, n = {v['c_n']} images; absent classes (hatched): {absent}. "
-        "This is a post-outcome exploratory analysis without a prospective independent cohort."
+        f"c, Row-normalised confusion matrix, n = {v['c_n']} images; absent classes (hatched): {absent}."
     )
-    hits = qa.banned_in_text(text)
+    # no per-figure exploratory statement and no development history (mainline_rules.md)
+    hits = qa.banned_in_text(text) + qa.dev_history_in_text(text)
     if hits:
         raise RuntimeError(f"caption contains banned words: {hits}")
     return text

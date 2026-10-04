@@ -97,10 +97,37 @@ def test_caveat_allow_lifts_default_caveats(tmp_path):
     assert qa.figure_text_audit(fig, cfg=cfg)
 
 
+@pytest.mark.parametrize("text", [
+    "Earlier model", "Historical model", "Wave-1", "Wave 2 rule", "Hypothesis status",
+    "Pre-registered contrast estimate", "Closeout status", "closure analysis", "Repaired head",
+    "post-outcome", "after reconciliation",
+])
+def test_development_history_fails_anywhere(text):
+    """Earlier versions and internal plan names never reach a figure (mainline_rules.md)."""
+    fig, ax = _fig(); ax.legend(handles=ax.get_lines(), labels=[text])
+    out = qa.figure_text_audit(fig)
+    assert any("development history" in o for o in out), (text, out)
+
+
+def test_development_history_clean_wording_passes():
+    fig, ax = _fig()
+    ax.set_xlabel("Contrast estimate (95% CI)"); ax.set_title("Black box vs vanilla CBM")
+    ax.legend(handles=ax.get_lines(), labels=["No clear difference"])
+    assert not [o for o in qa.figure_text_audit(fig) if "development history" in o]
+    assert qa.dev_history_in_text("Closure of the macular hole") == ["closure"]  # word is caught in text too
+    assert qa.dev_history_in_text("Secondary analyses, one block per question") == []
+
+
+def test_development_history_allow_for_genuine_method_names(tmp_path):
+    cfg = config.load(_write_toml(tmp_path, 'data_root = "data"\n[qa]\ncaveat_allow = ["closure"]\n'))
+    fig, ax = _fig(); ax.set_xlabel("Macular hole closure rate")
+    assert not [o for o in qa.figure_text_audit(fig, cfg=cfg) if "development history" in o]
+
+
 @pytest.mark.parametrize("body,msg", [
     ('[qa]\nforbidden_patterns = ["(unclosed"]\n', "not a valid regular expression"),
     ('[qa]\nforbidden_patterns = "E1"\n', "must be a list"),
-    ('[qa]\ncaveat_allow = ["not-a-default"]\n', "not in the default caveat list"),
+    ('[qa]\ncaveat_allow = ["not-a-default"]\n', "not in the default caveat"),
 ])
 def test_config_rejects_bad_text_rules(tmp_path, body, msg):
     with pytest.raises(ValueError, match=msg):

@@ -39,7 +39,9 @@
 
 ## 4. 措辞（图内文字 + 图注）
 - [ ] 禁用词（项目唯一一份表，图与表共用）在图内与图注中均未出现，例如 validated / superior / clinical benefit / diagnostic / clinically proven / deployment
-- [ ] 结局观察后分析写明 post-outcome exploratory（按项目要求）
+- [ ] 只呈现主线：没有任何图、表、图注用到规格 §0 版本清单里的丢弃版本（不当对照、补充实验或"修复前后"比较）
+- [ ] 次要分析按科学问题组织，不出现内部计划编号（H1–H5、E1/E2、R0–R5 等）和"预注册 / 假设状态"
+- [ ] 图注、表题不写开发史（wave、closure、修复、重拟合、口径裁决）和逐图探索性声明（`medfig-plan/references/mainline_rules.md`）
 - [ ] 类别限制、样本单位（"组"指临床组还是推断组）写清
 - [ ] P 值、阈值、闸门类结果不被写成疗效或有效性结论
 - [ ] 图注里的每个事实能在数据或 provenance 中找到对应值

@@ -27,7 +27,7 @@ def snapshot(root: Path) -> dict[str, bytes]:
 
 @pytest.fixture
 def src(tmp_path):
-    """Copy of the four real skills plus junk files that must be excluded."""
+    """Copy of the real skills plus junk files that must be excluded."""
     s = tmp_path / "src"
     for name in SKILLS:
         shutil.copytree(ROOT / name, s / name,
@@ -81,7 +81,7 @@ def test_dry_run_changes_nothing(src, roots, tmp_path):
         assert str(t) in text
 
 
-def test_install_copies_exactly_four_dirs(src, roots, tmp_path):
+def test_install_copies_exactly_the_skill_dirs(src, roots, tmp_path):
     assert make(src, roots, tmp_path).install() == 0
     for t in roots:
         assert sorted(p.name for p in t.iterdir()) == sorted([*SKILLS, "other-skill"])

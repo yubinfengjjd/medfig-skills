@@ -11,8 +11,8 @@
 - 小样本提示：n 较小时只画 50% HDR，写 "indicative"。
 - 同一病例出现在多张图时互相引用。
 
-## 2. 探索性声明（E2）
-按项目实际情况写入每个图注，例如："This is a post-outcome exploratory analysis without a prospective independent cohort."。有前瞻验证队列的项目改写为相应表述，但不能省略研究性质说明。
+## 2. 研究性质与开发史（E2）
+图注不逐图写探索性声明，也不写开发流程（wave、closure、修复 / repair、重拟合 / refit、早期版本、口径裁决、post-outcome exploratory）。研究的探索性质由稿件 Methods 的统计部分交代一次。早期版本、修复前模型不进图注，也不当对照；按内部计划编号组织的分析改写成它回答的科学问题。细则见 `medfig-plan/references/mainline_rules.md`；`qa.dev_history_in_text(text)` 可检查图注草稿。
 
 ## 3. 适用限制（E4, E6）
 凡相关就必须出现：

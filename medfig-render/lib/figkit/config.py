@@ -112,10 +112,12 @@ def _qa_words(raw, source):
             re.compile(pat)
         except re.error as e:
             raise ValueError(f"[qa] forbidden_patterns in {source}: {pat!r} is not a valid regular expression ({e})")
-    from .qa import FIGURE_CAVEATS
-    bad = [w for w in out["caveat_allow"] if w.lower() not in {k.lower() for k in FIGURE_CAVEATS}]
+    from .qa import DEV_HISTORY, FIGURE_CAVEATS
+    known = {k.lower() for k in FIGURE_CAVEATS} | {k.lower() for k in DEV_HISTORY}
+    bad = [w for w in out["caveat_allow"] if w.lower() not in known]
     if bad:
-        raise ValueError(f"[qa] caveat_allow in {source}: {bad} not in the default caveat list {sorted(FIGURE_CAVEATS)}")
+        raise ValueError(f"[qa] caveat_allow in {source}: {bad} not in the default caveat / development-history "
+                         f"lists {sorted(FIGURE_CAVEATS) + sorted(DEV_HISTORY)}")
     de = raw.get("palette_min_delta_e")
     if de is not None and (isinstance(de, bool) or not isinstance(de, (int, float)) or not 0 <= de < 100):
         raise ValueError(f"[qa] palette_min_delta_e in {source} must be a number in [0, 100)")

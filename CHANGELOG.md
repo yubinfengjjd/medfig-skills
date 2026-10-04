@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 (2026-10-07)
+
+- 新技能 `medfig-outline`：图表定稿后生成 Methods / Results 写作大纲（`写作大纲.docx` + `.md`），并把每个小节引用的图、表、图注和代码拷贝到项目外的分节文件夹。
+  - Results 每节标题用一句话概括发现；Methods 不写结果数字。
+  - `outline_check.py`：大纲里的每个数对照 `source.json` / 表格回核（按写出的位数四舍五入，支持百分数、分数、带符号值），检查引用的 panel / 表是否存在、每个主图是否被覆盖、禁用词、开发史和项目代号。
+- 只呈现主线版本（`medfig-plan/references/mainline_rules.md`，全部技能共用）：早期版本不当对照或补充实验，按内部计划编号组织的分析改成按科学问题组织，图注不逐图写探索性声明。
+  - figkit 新增 `qa.DEV_HISTORY`：图内出现 pre-registered、closure、wave-N、earlier version、repair、post-outcome 等词时导出失败；`qa.dev_history_in_text` 供图注 / 表格 / 大纲检查。
+  - `medfig-plan` 第 2 步新增必问项"版本与开发史"，规格 §0 写版本清单。
+
 ## 0.1.0 (2026-10-07)
 
 首个公开版本。

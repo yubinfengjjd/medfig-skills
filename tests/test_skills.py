@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILLS = ["medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate"]
+SKILLS = ["medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline"]
 ALLOWED = {"name", "description", "license", "metadata"}
 # Project names / dataset names that must never appear in the skills: one per line in the git-ignored
 # tests/leak_strings.local.txt (kept out of the public repo), plus the generic markers below.
