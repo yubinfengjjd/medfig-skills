@@ -8,6 +8,7 @@
 - 只呈现主线版本（`medfig-plan/references/mainline_rules.md`，全部技能共用）：早期版本不当对照或补充实验，按内部计划编号组织的分析改成按科学问题组织，图注不逐图写探索性声明。
   - figkit 新增 `qa.DEV_HISTORY`：图内出现 pre-registered、closure、wave-N、earlier version、repair、post-outcome 等词时导出失败；`qa.dev_history_in_text` 供图注 / 表格 / 大纲检查。
   - `medfig-plan` 第 2 步新增必问项"版本与开发史"，规格 §0 写版本清单。
+- `medfig-outline` 按论证规划骨架：支持多级小节（训练按阶段拆成 2.3.1、2.3.2 …），Results 3–5 个大节、一节可用多张图；检查脚本报出"一张图一节、两边节数相同"的平铺结构、只有一个小节、要点过少的节；小节文件夹嵌在大节文件夹里。
 - `medfig-outline` 写法收紧：大纲是给作者的写作提示，不是数据表。检查脚本限制每节 ≤ 3 段、每段 ≤ 3 条要点、每条 ≤ 70 字且 ≤ 2 个结果数字（区间算一个），不以"引用 Fig …"开头；出处并到段落行末，代码每个角色一行。
 
 ## 0.1.0 (2026-10-07)

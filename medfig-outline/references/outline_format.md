@@ -111,3 +111,38 @@ numbers:                                         # Results 里每个数的出处
   交代 Site D、Site E 只有两类，结果只作描述。
   组层结果一句话带过，逐队列数值见 Table 2。
 ```
+
+## 6. 骨架：按论证规划，不按图平铺
+
+```yaml
+methods:
+  - id: "2.3"
+    title: Training procedure
+    short: Training
+    subsections:                       # 小节可以继续嵌套；编号必须以父节编号开头
+      - id: "2.3.1"
+        title: "Stage 1: anatomy front end"
+        short: Stage1
+        focus: [...]
+      - id: "2.3.2"
+        title: "Stage 2: joint concept and classification training"
+        short: Stage2
+        focus: [...]
+results:
+  - id: "3.2"
+    title: <一句话发现>                 # 大节标题必须是发现句
+    subtitle: <中文副标题>
+    short: External
+    subsections:
+      - id: "3.2.1"
+        title: External performance and error direction   # 小节可用短标题
+        subtitle: 外部性能与错误方向
+        short: Performance
+        paragraphs: [...]
+```
+
+- **Methods 顺序**：数据 → 模型结构 → 训练过程（按阶段拆小节）→ 评估与统计 → 附加分析。节数由内容决定。
+- **Results**：3–5 个大节（`style.results_max_sections`，默认 5），每节回答一个问题；一节可用多张图，一张图的 panel 可分到不同节。
+- 父节可以只有标题（内容全在小节里），也可以有一句总述段落。
+- 检查脚本报错的平铺信号：Methods 与 Results 节数相同且每个 Results 节恰好一张主图；只有一个小节；末级节少于 2 条要点；小节编号不在父节之下。
+- 没有文档依据、只从代码 / 配置推断的细节，要点末尾标"（待核）"。

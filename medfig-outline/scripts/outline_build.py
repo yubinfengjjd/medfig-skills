@@ -65,38 +65,55 @@ def _code_line(c):
 
 
 # ------------------------------------------------------------------------------------------------ markdown
-def to_md(o):
-    L = [f"# 写作大纲：{o.get('project', '')}", ""]
-    for sec in o.get("methods", []):
-        L += [f"## {sec['id']} {sec['title']}", "", "**写作重点：**", ""]
-        for blk in sec.get("focus", []):
-            L.append(f"- {blk['topic']}：")
-            L += [f"  - {t}" for t in blk.get("points", [])]
+HEAD_PT = {0: 14, 1: 12, 2: 11}   # docx heading size by depth (section / subsection / sub-subsection)
+
+
+def _walk(secs):
+    yield from outline_check._tree(secs)
+
+
+def _md_body(sec, results):
+    L = []
+    if not results:
+        if sec.get("focus"):
+            L += ["**写作重点：**", ""]
+            for blk in sec["focus"]:
+                L.append(f"- {blk['topic']}：")
+                L += [f"  - {t}" for t in blk.get("points", [])]
         if sec.get("foreshadow"):
             L += ["", "**为后文铺垫：**", ""] + [f"- {t}" for t in sec["foreshadow"]]
         if sec.get("code"):
-            L += ["", "**关联代码（只作为你脑内映射）：**", ""] + [f"- `{_code_line(c)}` – {c.get('role', '')}"
-                                                         for c in sec["code"]]
-        L.append("")
-    for sec in o.get("results", []):
-        L += [f"## {sec['id']} {sec['title']}", "", f"（{sec['subtitle']}）", "", "**写作要点**", ""]
-        for p in sec.get("paragraphs", []):
+            L += ["", "**关联代码（只作为你脑内映射）：**", ""] + [f"- {r}：{line}" for r, line in _code_roles(sec["code"])]
+        return L
+    if sec.get("paragraphs"):
+        L += ["**写作要点**", ""]
+        for p in sec["paragraphs"]:
             L.append(f"- **{_label(p)}**：{p.get('claim', '')}{_cite_tail(p)}")
             L += [f"  - {t}" for t in p.get("points", [])]
-        if sec.get("items"):
-            L += ["", "**图 / 表**", ""] + [f"- {i['ref']}：{i.get('what', '')}" for i in sec["items"]]
-        if sec.get("code"):
-            L += ["", "**相关代码**", ""] + [f"- {role}：{line}" for role, line in _code_roles(sec["code"])]
-        if sec.get("boundaries"):
-            L += ["", "**措辞边界**", ""] + [f"- {t}" for t in sec["boundaries"]]
-        L.append("")
+    if sec.get("items"):
+        L += ["", "**图 / 表**", ""] + [f"- {i['ref']}：{i.get('what', '')}" for i in sec["items"]]
+    if sec.get("code"):
+        L += ["", "**相关代码**", ""] + [f"- {role}：{line}" for role, line in _code_roles(sec["code"])]
+    if sec.get("boundaries"):
+        L += ["", "**措辞边界**", ""] + [f"- {t}" for t in sec["boundaries"]]
+    return L
+
+
+def to_md(o):
+    L = [f"# 写作大纲：{o.get('project', '')}", ""]
+    for results, secs in ((False, o.get("methods", [])), (True, o.get("results", []))):
+        for sec, depth, _ in _walk(secs):
+            L += [f"{'#' * (depth + 2)} {sec['id']} {sec['title']}", ""]
+            if results and sec.get("subtitle"):
+                L += [f"（{sec['subtitle']}）", ""]
+            body = _md_body(sec, results)
+            L += body + ([""] if body else [])
     return "\n".join(L)
 
 
 # ------------------------------------------------------------------------------------------------ docx
 def to_docx(o, path):
     import docx
-    from docx.enum.text import WD_LINE_SPACING  # noqa: F401  (python-docx import check)
     from docx.oxml.ns import qn
     from docx.shared import Cm, Pt
 
@@ -110,11 +127,10 @@ def to_docx(o, path):
     st.element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
     st.paragraph_format.space_after = Pt(2)
 
-    def para(text="", level=0, bold=False, size=None, mono=False):
+    def para(text="", level=0, bold=False, size=None):
         p = d.add_paragraph()
         p.paragraph_format.left_indent = Cm(0.74 * level)
-        parts = re.split(r"(`[^`]+`)", text)
-        for part in parts:
+        for part in re.split(r"(`[^`]+`)", text):
             if not part:
                 continue
             code = part.startswith("`") and part.endswith("`")
@@ -122,52 +138,55 @@ def to_docx(o, path):
             r.bold = bold
             if size:
                 r.font.size = Pt(size)
-            if code or mono:
+            if code:
                 r.font.name = "Consolas"
                 r._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
         return p
 
-    for sec in o.get("methods", []):
-        para(f"{sec['id']} {sec['title']}", bold=True, size=14)
-        para("写作重点：", bold=True)
-        for blk in sec.get("focus", []):
-            para(f"{blk['topic']}：", level=1)
-            for t in blk.get("points", []):
-                para(t, level=2)
-        if sec.get("foreshadow"):
-            para("为后文铺垫：", level=1)
-            for t in sec["foreshadow"]:
-                para(t, level=2)
-        if sec.get("code"):
-            para("关联代码（只作为你脑内映射）：", level=1)
-            for c in sec["code"]:
-                para(f"`{_code_line(c)}` – {c.get('role', '')}", level=2)
-        para()
-    for sec in o.get("results", []):
-        para(f"{sec['id']} {sec['title']}", bold=True, size=14)
-        para(f"（{sec['subtitle']}）", size=11)
-        para("写作要点", bold=True)
-        for p in sec.get("paragraphs", []):
-            # one line per paragraph: bold label + the claim + where it is shown; points follow as plain lines
-            q = d.add_paragraph()
-            q.paragraph_format.left_indent = Cm(0.74)
-            q.add_run(_label(p) + "：").bold = True
-            q.add_run(p.get("claim", "") + _cite_tail(p))
-            for t in p.get("points", []):
-                para(t, level=2)
-        if sec.get("items"):
-            para("图 / 表", bold=True)
-            for i in sec["items"]:
-                para(f"{i['ref']}：{i.get('what', '')}", level=1)
-        if sec.get("code"):
-            para("相关代码", bold=True)
-            for role, line in _code_roles(sec["code"]):
-                para(f"{role}：{line}", level=1)
-        if sec.get("boundaries"):
-            para("措辞边界", bold=True)
-            for t in sec["boundaries"]:
-                para(t, level=1)
-        para()
+    for results, secs in ((False, o.get("methods", [])), (True, o.get("results", []))):
+        for sec, depth, _ in _walk(secs):
+            h = para(f"{sec['id']} {sec['title']}", bold=True, size=HEAD_PT.get(depth, 10.5))
+            h.paragraph_format.space_before = Pt(10 if depth == 0 else 6)
+            if results and sec.get("subtitle"):
+                para(f"（{sec['subtitle']}）", size=11 if depth == 0 else 10.5)
+            if not results:
+                if sec.get("focus"):
+                    para("写作重点：", bold=True)
+                    for blk in sec["focus"]:
+                        para(f"{blk['topic']}：", level=1)
+                        for t in blk.get("points", []):
+                            para(t, level=2)
+                if sec.get("foreshadow"):
+                    para("为后文铺垫：", level=1)
+                    for t in sec["foreshadow"]:
+                        para(t, level=2)
+                if sec.get("code"):
+                    para("关联代码（只作为你脑内映射）：", level=1)
+                    for role, line in _code_roles(sec["code"]):
+                        para(f"{role}：{line}", level=2)
+                continue
+            if sec.get("paragraphs"):
+                para("写作要点", bold=True)
+                for p in sec["paragraphs"]:
+                    # one line per paragraph: bold label + claim + where it is shown; points follow as plain lines
+                    q = d.add_paragraph()
+                    q.paragraph_format.left_indent = Cm(0.74)
+                    q.add_run(_label(p) + "：").bold = True
+                    q.add_run(p.get("claim", "") + _cite_tail(p))
+                    for t in p.get("points", []):
+                        para(t, level=2)
+            if sec.get("items"):
+                para("图 / 表", bold=True)
+                for i in sec["items"]:
+                    para(f"{i['ref']}：{i.get('what', '')}", level=1)
+            if sec.get("code"):
+                para("相关代码", bold=True)
+                for role, line in _code_roles(sec["code"]):
+                    para(f"{role}：{line}", level=1)
+            if sec.get("boundaries"):
+                para("措辞边界", bold=True)
+                for t in sec["boundaries"]:
+                    para(t, level=1)
     d.save(str(path))
 
 
@@ -232,8 +251,16 @@ def build(outline_path, project, out, figkit_toml=None):
     dx = out / "写作大纲.docx"
     to_docx(o, dx)
     for results, top, secs in ((False, "2_Methods", o.get("methods", [])), (True, "3_Results", o.get("results", []))):
-        for sec in secs:
-            _copy_section(root, o, sec, results, out / top / f"{sec['id']}_{sec['short']}")
+        for sec, _, parents in outline_check._tree(secs):
+            # subsections live inside their parent's folder: 3_Results/3.1_x/3.1.2_y/
+            dest = out / top
+            for par in parents:
+                dest = dest / f"{par['id']}_{par['short']}"
+            dest = dest / f"{sec['id']}_{sec['short']}"
+            if _refs(sec, results) != ([], []) or sec.get("code"):
+                _copy_section(root, o, sec, results, dest)
+            else:
+                dest.mkdir(parents=True, exist_ok=True)
     return dict(docx=str(dx), md=str(md), out=str(out))
 
 

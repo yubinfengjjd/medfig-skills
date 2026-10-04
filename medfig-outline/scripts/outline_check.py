@@ -57,6 +57,58 @@ def _texts(sec, results):
             yield f"Methods {sid} foreshadow", t
 
 
+def _nodes(secs):
+    """Every section and subsection, depth-first (``subsections:`` nest one level or more)."""
+    for sec in secs or []:
+        yield sec
+        yield from _nodes(sec.get("subsections"))
+
+
+def _tree(secs, depth=0, parents=()):
+    """(section, depth, parent chain) depth-first, for rendering and folder paths."""
+    for sec in secs or []:
+        yield sec, depth, parents
+        yield from _tree(sec.get("subsections"), depth + 1, (*parents, sec))
+
+
+def _main_figs_in(sec, main):
+    figs = set()
+    for s in _nodes([sec]):
+        refs = [i["ref"] for i in s.get("items", []) if isinstance(i, dict)]
+        for p in s.get("paragraphs", []):
+            refs += p.get("cites", [])
+        for r in refs:
+            figs |= {n for n, _ in (_expand(r) or []) if n in main}
+    return figs
+
+
+def _structure(o, lim):
+    """Plan the outline by argument, not one section per figure (outline_format.md section 6)."""
+    out = []
+    M, R = o.get("methods", []), o.get("results", [])
+    main = set(o.get("main_figures", []))
+    if len(R) > lim["results_max_sections"]:
+        out.append(f"structure: {len(R)} top-level Results sections (max {lim['results_max_sections']}); group them "
+                   "by the argument and use subsections")
+    if len(M) == len(R) and len(R) >= 4 and all(len(_main_figs_in(s, main)) == 1 for s in R):
+        out.append("structure: Methods and Results have the same number of sections and every Results section is "
+                   "one figure -- plan Results by the argument (one section may use several figures)")
+    for kind, secs in (("Methods", M), ("Results", R)):
+        for sec, depth, parents in _tree(secs):
+            subs = sec.get("subsections") or []
+            if parents and not str(sec["id"]).startswith(str(parents[-1]["id"]) + "."):
+                out.append(f"structure: {kind} {sec['id']} is not numbered under {parents[-1]['id']}")
+            if len(subs) == 1:
+                out.append(f"structure: {kind} {sec['id']} has a single subsection; merge it into the parent")
+            if not subs:
+                n = (sum(len(b.get("points", [])) for b in sec.get("focus", [])) if kind == "Methods"
+                     else sum(len(p.get("points", [])) for p in sec.get("paragraphs", [])))
+                if n < 2:
+                    out.append(f"structure: {kind} {sec['id']} has {n} point(s); a section needs at least 2 "
+                               "(otherwise merge it)")
+    return out
+
+
 def _expand(ref):
     """'Fig2a-c' -> [('fig2', 'a'), ('fig2', 'b'), ('fig2', 'c')]; 'S5' -> [('s05', None)]; 'T1' -> table."""
     m = REF.match(ref)
@@ -165,7 +217,7 @@ def check(outline_path, project, figkit_toml=None):
         if not _matches(n["text"], v, n.get("tol"), n.get("magnitude", False)):
             out.append(f"number {n['text']!r}: source value {v} ({n['source']}) does not round to it")
     allow_all = set(o.get("allow_numbers", []))  # design constants / interval notation (95%, 16 concepts)
-    for sec in o.get("results", []):
+    for sec in _nodes(o.get("results", [])):
         for where, text in _texts(sec, True):
             if where.endswith("title") or "boundary" in where:
                 continue
@@ -178,7 +230,7 @@ def check(outline_path, project, figkit_toml=None):
                     out.append(f"{where}: number {m!r} not registered in numbers")
     # ---- references and coverage
     covered = set()
-    for results, secs in ((False, o.get("methods", [])), (True, o.get("results", []))):
+    for results, secs in ((False, _nodes(o.get("methods", []))), (True, _nodes(o.get("results", [])))):
         for sec in secs:
             refs = list(sec.get("items", [])) if not results else [i["ref"] for i in sec.get("items", [])]
             for p in sec.get("paragraphs", []):
@@ -205,7 +257,7 @@ def check(outline_path, project, figkit_toml=None):
         if f not in covered:
             out.append(f"main figure {f} not covered by any Results section")
     # ---- Methods without result numbers
-    for sec in o.get("methods", []):
+    for sec in _nodes(o.get("methods", [])):
         allow = set(sec.get("allow_numbers", [])) | set(o.get("allow_numbers", []))
         for where, text in _texts(sec, False):
             if not where.endswith("focus"):
@@ -214,15 +266,17 @@ def check(outline_path, project, figkit_toml=None):
                 if m in allow or (m.isdigit() and len(m) <= 1):
                     continue
                 out.append(f"{where}: result-like number {m!r} (Methods describe structure; allow_numbers if not a result)")
-    # ---- Results titles
+    # ---- Results titles: top-level sections state the finding in one sentence; subsections may be short labels
     for sec in o.get("results", []):
         t = sec.get("title", "")
         if VAGUE_TITLE.match(t) or len(t.split()) < 5:
             out.append(f"Results {sec['id']} title {t!r}: write a one-sentence finding, not a topic")
+    for sec in _nodes(o.get("results", [])):
+        t = sec.get("title", "")
         if NUM.search(t):
             out.append(f"Results {sec['id']} title {t!r}: no number in the title (numbers go in the paragraphs)")
     # ---- wording
-    for results, secs in ((False, o.get("methods", [])), (True, o.get("results", []))):
+    for results, secs in ((False, _nodes(o.get("methods", []))), (True, _nodes(o.get("results", [])))):
         for sec in secs:
             for where, text in _texts(sec, results):
                 bare = CODE_NOTE.sub("", text)
@@ -234,11 +288,12 @@ def check(outline_path, project, figkit_toml=None):
                     out += [f"{where}: project code pattern {p!r}" for p in qa.forbidden_in_text(bare, cfg)]
     # ---- style: an outline is writing guidance, not a data dump (references/outline_format.md §5)
     out += _style(o)
+    out += _structure(o, {**STYLE, **(o.get("style") or {})})
     return out
 
 
 STYLE = dict(point_max_chars=70, point_max_numbers=2, paragraph_max_points=3, paragraph_max_numbers=4,
-             section_max_paragraphs=3, opener_max_repeat=2)
+             section_max_paragraphs=3, opener_max_repeat=2, results_max_sections=5)
 OPENER = re.compile(r"^\s*(引用|根据|如|见)\s*(?:Fig|S|ST|T)\s?\d", re.I)
 
 
@@ -255,7 +310,7 @@ def _style(o):
         return [m for m in NUM.findall(t) if m not in allow_all
                 and not (m.rstrip("%").replace(",", "").isdigit() and len(m.rstrip("%").replace(",", "")) <= 1)]
 
-    for kind, secs in (("Methods", o.get("methods", [])), ("Results", o.get("results", []))):
+    for kind, secs in (("Methods", _nodes(o.get("methods", []))), ("Results", _nodes(o.get("results", [])))):
         for sec in secs:
             blocks = ([(p.get("label", ""), p.get("points", [])) for p in sec.get("paragraphs", [])] if kind == "Results"
                       else [(b.get("topic", ""), b.get("points", [])) for b in sec.get("focus", [])])

@@ -44,19 +44,19 @@ def _outline(**over):
         "project": "demo", "figures_root": "out/figures", "tables_root": "out/tables",
         "captions": ["docs/captions_zh.md", "docs/captions"], "main_figures": ["fig2", "fig3"],
         "methods": [{"id": "2.1", "title": "Cohorts and evaluation", "short": "Cohorts",
-                     "focus": [{"topic": "研究设计", "points": ["多中心回顾性研究；三分类（内部代号 E2）"]}],
+                     "focus": [{"topic": "研究设计", "points": ["多中心回顾性研究；三分类（内部代号 E2）", "说明外部队列不参与训练"]}],
                      "items": ["T1"], "code": [{"path": "tables/build_tables.py", "role": "表格"}]}],
         "results": [
             {"id": "3.1", "title": "Cohorts separate in the backbone representation", "subtitle": "队列在骨干表示中分开",
              "short": "Domain_shift",
              "paragraphs": [{"label": "第一段", "claim": "骨干层面队列可区分",
-                             "points": ["域可辨识性 AUC 约 0.983，n = 13,859"], "cites": ["Fig2a-b", "T1"]}],
+                             "points": ["域可辨识性 AUC 约 0.983，n = 13,859", "说明 PCA 只在内部拟合"], "cites": ["Fig2a-b", "T1"]}],
              "items": [{"ref": "Fig2a", "what": "PCA"}], "boundaries": ["不写设备因果"],
              "code": [{"path": "figures/main/fig2.py", "role": "绘图"},
                       {"path": "src/eval.py", "role": "计算", "guess": True}]},
             {"id": "3.2", "title": "Edema recall is high internally", "subtitle": "内部 Edema 召回率高",
              "short": "Internal", "paragraphs": [{"label": "第一段", "claim": "召回高",
-                                                   "points": ["Edema 召回率 92.7%；内部 BACC 约 0.96"],
+                                                   "points": ["Edema 召回率 92.7%；内部 BACC 约 0.96", "说明主要错误方向"],
                                                    "cites": ["Fig3a", "T1"]}],
              "items": [{"ref": "Fig3a", "what": "recall"}], "code": []}],
         "numbers": [{"text": "0.983", "source": "fig2.source.json:values.auc.all"},
@@ -217,3 +217,61 @@ def test_style_range_counts_as_one_number(proj, tmp_path):
     o["numbers"] += [{"text": "0.98", "source": "fig2.source.json:values.auc.all"}]
     o["results"][0]["paragraphs"][0]["points"] = ["点出范围 0.98–0.983，n = 13,859"]
     assert not any("numbers in one point" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+
+def _nested():
+    o = _outline()
+    m = o["methods"][0]
+    m["subsections"] = [
+        {"id": "2.1.1", "title": "Stage 1", "short": "Stage1", "focus": [{"topic": "前端", "points": ["说明边界", "说明软带"]}]},
+        {"id": "2.1.2", "title": "Stage 2", "short": "Stage2", "focus": [{"topic": "联合训练", "points": ["说明损失", "说明冻结"]}]}]
+    r = o["results"][0]
+    r["subsections"] = [
+        {"id": "3.1.1", "title": "Cohort composition", "short": "Cohorts", "subtitle": "队列构成",
+         "paragraphs": [{"label": "第一段", "claim": "构成不同", "points": ["点出构成差异", "说明两类队列"], "cites": ["T1"]}]},
+        {"id": "3.1.2", "title": "Representation", "short": "Repr", "subtitle": "表示",
+         "paragraphs": [{"label": "第一段", "claim": "可分", "points": ["说明 PCA", "对比空间"], "cites": ["Fig2a"]}]}]
+    return o
+
+
+def test_subsections_are_checked_and_rendered(proj, tmp_path):
+    o = _nested()
+    assert outline_check.check(_write(tmp_path, o), proj) == []
+    o["results"][0]["subsections"][1]["paragraphs"][0]["cites"] = ["Fig2z"]
+    assert any("3.1.2" in i and "Fig2z" in i for i in outline_check.check(_write(tmp_path, o), proj))
+    o = _nested()
+    res = outline_build.build(_write(tmp_path, o), proj, tmp_path / "o4")
+    import docx
+    paras = docx.Document(res["docx"]).paragraphs
+    heads = {p.text: p.runs[0].font.size.pt for p in paras if p.runs and p.runs[0].bold and p.runs[0].font.size}
+    assert heads["2.1 Cohorts and evaluation"] == 14 and heads["2.1.1 Stage 1"] == 12
+    assert heads["3.1.2 Representation"] == 12
+    out = tmp_path / "o4"
+    assert (out / "3_Results/3.1_Domain_shift/3.1.1_Cohorts/tables/T1.csv").is_file()
+    assert (out / "3_Results/3.1_Domain_shift/3.1.2_Repr/figures/fig2.pdf").is_file()
+    assert "### 2.1.1 Stage 1" in Path(res["md"]).read_text(encoding="utf-8")
+
+
+def test_structure_rules(proj, tmp_path):
+    o = _nested()
+    o["methods"][0]["subsections"] = o["methods"][0]["subsections"][:1]
+    assert any("single subsection" in i for i in outline_check.check(_write(tmp_path, o), proj))
+    o = _nested()
+    o["results"][0]["subsections"][0]["id"] = "3.2.1"
+    assert any("not numbered under 3.1" in i for i in outline_check.check(_write(tmp_path, o), proj))
+    o = _nested()
+    o["results"][0]["subsections"][0]["paragraphs"][0]["points"] = ["只有一条"]
+    assert any("3.1.1 has 1 point" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+def test_mechanical_one_figure_per_section_is_flagged(proj, tmp_path):
+    o = _outline()
+    sec = o["results"][1]
+    o["results"] = [dict(sec, id=f"3.{k}", short=f"S{k}") for k in range(1, 5)]
+    o["methods"] = [dict(o["methods"][0], id=f"2.{k}", short=f"M{k}") for k in range(1, 5)]
+    o["main_figures"] = ["fig3"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("same number of sections" in i for i in out)
+    o["results"] = [dict(sec, id=f"3.{k}", short=f"S{k}") for k in range(1, 7)]
+    assert any("6 top-level Results sections" in i for i in outline_check.check(_write(tmp_path, o), proj))
