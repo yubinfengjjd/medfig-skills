@@ -15,7 +15,8 @@ description: Use when drawing one specific figure for a medical research paper t
 | 还没定图、panel、图型、主附图划分 | medfig-plan（先出规格再回来） |
 | 规格已定，要批量出多张 / 整套、并行执行、台账与终审 | medfig-orchestrate（逐图任务内部用本技能） |
 | 只要一张纯影像网格（影像 + 掩膜 / 热图 / 放大框，没有统计 panel） | scipilot-medimg-figure-skill（见 §9） |
-| 非医学数据图、示意图、流程图、架构图 | 不用本技能 |
+| 示意图、流程图、架构图 | medfig-schematic（生图模型画） |
+| 非医学数据图 | 不用本技能 |
 
 没有规格时，不要边画边定：先问清每个 panel 的一句话结论和数据来源，或转 medfig-plan。
 
@@ -93,7 +94,7 @@ if __name__ == "__main__":
    - `qa.colour_audit`（S3）：数据图元只用黑白灰（饱和度 ≤ 0.15），或数据热图用灰色 cmap
    - `qa.figure_text_audit`：图内文字只放结果与读图编码。报错项：图级自由文字（`fig.text` 注释行、`suptitle`；panel 序号和 `supxlabel/supylabel` 除外）、免责 / 口径措辞（`qa.FIGURE_CAVEATS`：illustrative、not a clinical、not used for、by construction、descriptive、not a CI、retrospective、exploratory ...，项目可用 `[qa] caveat_allow` 放行）、交叉引用（Table 6、Fig. 3b、Supplementary Fig. S2）、项目代号（`[qa] forbidden_patterns` 正则，例如 `\bE[12]\b`）、开发史（`qa.DEV_HISTORY`：pre-registered、hypothesis status、closeout、closure、wave-N、earlier / historical version、repair、post-outcome、reconciliation；只有真实方法名才用 `[qa] caveat_allow` 放行）。修法是把这句话挪进图注、代号换描述名、丢弃版本直接删掉，不是放行
    - `qa.palette_clash`（S3）：同一 axes 里两种不同数据色几乎同色（ΔE00 < 12，可在 `[qa] palette_min_delta_e` 调）。修法是换色板颜色（用 `style.delta_e` 和图内每个颜色比），不是调低阈值
-3. scipilot `export_figure`：`<out_dir>/figures/<kind>/<name>.{pdf,svg,png}` + `_grayscale.png`（600 dpi），再逐个 `check_figure`，FAIL 时删除已写文件并抛错。
+3. scipilot `export_figure`：`<out_dir>/figures/<kind>/<name>.{pdf,svg,png}` + `_grayscale.png`（600 dpi），再逐个 `check_figure`，FAIL 时删除已写文件并抛错。PDF 里的位图一律写成 8 位 DeviceRGB（`export.pdf_rgb_images`）：matplotlib 默认把 ≤ 256 色的位图（热图、掩膜、混淆矩阵）存成索引色，Adobe Illustrator 置入这类 PDF 时会把颜色读错（格子发白、白字消失）。导出后 `export.pdf_image_issues` 复查合成图和每个 panel PDF，发现索引色或低于 8 位的位图即 FAIL。嵌入字体一律写真实 PostScript 名（`ArialMT`，不带 `ABCDEF+` 子集前缀，`export.pdf_plain_font_names`；两项补丁合并为 `export.pdf_illustrator_safe`）：带前缀的字体 Illustrator 打开时报"缺少字体"、不认本机 Arial；`export.pdf_font_issues` 复查，带前缀即 FAIL。装有 Arial 时 `style.apply` 把 Arial 排在 Helvetica 前，SVG 在 Windows 上不报缺 Helvetica。数学文本（`$P_{\mathrm{BH}}$`、`×10$^{−6}$`）用正文字体排（`style.RC` 的 `mathtext.*`），不嵌入 DejaVu；正文之外混入 DejaVu / STIX / cm 字体即 FAIL。
 4. S4：每个 `mark_panel` 过的 panel 另存 `<out_dir>/panels/<name>/<name>_<id>.{pdf,svg}`，fonttype 42、文字可选、尺寸与组图中一致、隐藏 a/b/c 序号；缺失即 FAIL 并删除组图。
 5. 写 `<name>.source.json`（inputs、transforms、values、qa、panels）。
 

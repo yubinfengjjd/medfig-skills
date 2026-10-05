@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILLS = ["medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline"]
+SKILLS = ["medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline", "medfig-schematic"]
 # dependency skill derived from Haojae/scipilot-figure-skill (MIT): leak scan + forbidden-workflow scan only
 ALL_SKILLS = SKILLS + ["scipilot-medimg-figure-skill"]
 ALLOWED = {"name", "description", "license", "metadata"}

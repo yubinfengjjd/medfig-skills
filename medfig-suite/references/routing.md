@@ -21,6 +21,7 @@
 | 规格已确认，多张或整套 | medfig-orchestrate（逐图任务内部用 medfig-render） |
 | 规格存在但与数据、文档口径冲突 | 回 medfig-plan 修规格，再继续 |
 | 已出图，只要按清单复审 | medfig-orchestrate 的 `references/review_checklist.md` |
+| 规格里的"示意图（外部绘制）"要画：研究设计图、架构图、流程示意图 | medfig-schematic（写生图提示词、逐轮评估） |
 
 "规格已确认"指：逐 panel 写了结论、数据文件与列、图型；用户已审阅。只有口头想法不算规格。
 
@@ -33,7 +34,10 @@
 | "8 张图的规格都确认了，批量出图" | medfig-orchestrate |
 | "OCT B-scan 叠分割掩膜，排成 3×4 网格" | scipilot-medimg-figure-skill |
 | "Grad-CAM 热力图 + ROC 曲线放一张图" | 分支 B（混排） |
-| "画一个方法流程图 / 网络架构图 / CONSORT 流程图" | 不在范围，告诉用户 |
+| "用 ChatGPT 画 Fig 1 的研究设计和网络架构示意图" | medfig-schematic |
+| "这是 GPT 出的架构图，帮我评估再出下一轮提示词" | medfig-schematic |
+| "CONSORT 流程图，带真实入组人数" | 不在范围（人数要逐格核对，交给作图软件），告诉用户 |
+| "用 matplotlib 代码画网络结构图" | 不在范围，告诉用户 |
 | "这组 CSV 用什么图好"（非医学、单图） | 不在范围，告诉用户 |
 
 ## 失败处理

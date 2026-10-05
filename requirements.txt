@@ -6,11 +6,11 @@ numpy==1.26.4
 pandas==2.2.2
 scipy==1.13.1
 seaborn==0.13.2
-Pillow==10.4.0
+Pillow==10.4.0          # image panels, medfig-schematic image_check
 plotly==5.24.1
 pyarrow==16.1.0         # parquet inputs (figkit Reader.parquet, medfig-plan data_health)
 pypdf==5.1.0            # check_figure: font-embedding check (degrades to a warning if missing)
-PyYAML==6.0.1           # medfig-outline (outline.yaml), skill tests
+PyYAML==6.0.1           # medfig-outline (outline.yaml), medfig-schematic (schematic.yaml), skill tests
 python-docx==1.1.2      # medfig-outline (写作大纲.docx)
 tomli==2.0.1; python_version < "3.11"   # figkit.toml on Python < 3.11 (3.11+ uses tomllib)
 

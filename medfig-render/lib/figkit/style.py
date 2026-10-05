@@ -30,7 +30,11 @@ RC = {"font.size": 6, "axes.labelsize": 6.5, "axes.titlesize": 6.5,
       "axes.spines.top": False, "axes.spines.right": False,
       "pdf.fonttype": 42, "svg.fonttype": "none",
       "axes.prop_cycle": mpl.cycler(color=DATA_CYCLE),
-      "axes.unicode_minus": True}
+      "axes.unicode_minus": True,
+      # mathtext ($P_{BH}$, ×10$^{-6}$) in the body sans font, not the DejaVu default: otherwise the PDF embeds
+      # DejaVuSans, which Illustrator reports as a missing font and which does not match the figure text
+      "mathtext.fontset": "custom", "mathtext.rm": "sans", "mathtext.it": "sans:italic",
+      "mathtext.bf": "sans:bold", "mathtext.sf": "sans", "mathtext.fallback": "stixsans"}
 
 # Soft theme (``theme = "soft"`` in figkit.toml; look after senlanke/figures4papers, re-derived here -- that
 # repository has no licence, so no code is taken). Key colours: Okabe-Ito minus sky / yellow (their tints
@@ -172,6 +176,21 @@ def _font_has_true_minus():
     return 0x2212 in FT2Font(path).get_charmap()
 
 
+def _arial_first():
+    """Put Arial ahead of Helvetica when Arial is installed. The PDF already embeds Arial on such a machine
+    (no Helvetica to find), but the SVG lists the families in rcParams order and Illustrator takes the first
+    one, so a Windows machine would open the SVG with Helvetica missing."""
+    names = {f.name for f in font_manager.fontManager.ttflist}
+    if "Arial" not in names:
+        return
+    for key in ("font.sans-serif", "font.family"):
+        fams = list(mpl.rcParams[key])
+        if "Helvetica" in fams and "Arial" in fams and fams.index("Arial") > fams.index("Helvetica"):
+            fams.remove("Arial")
+            fams.insert(fams.index("Helvetica"), "Arial")
+            mpl.rcParams[key] = fams
+
+
 def apply(cfg=None):
     """Apply the journal style from cfg (or the active config); returns the config used."""
     cfg = config.use(config.resolve_cfg(cfg))
@@ -179,6 +198,7 @@ def apply(cfg=None):
     from setup_style import setup_style
     setup_style(journal=cfg.journal, lang="en")
     mpl.rcParams.update(RC)
+    _arial_first()
     theme = getattr(cfg, "theme", "default")
     if theme == "soft":
         mpl.rcParams.update(SOFT_RC)

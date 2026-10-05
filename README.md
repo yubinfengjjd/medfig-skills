@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml/badge.svg)](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-面向医学 / 临床 AI 论文的图表技能：五个 medfig 技能，加上它们依赖的 `scipilot-medimg-figure-skill`，一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
+面向医学 / 临床 AI 论文的图表技能：六个 medfig 技能，加上它们依赖的 `scipilot-medimg-figure-skill`，一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
 
 | 技能 | 作用 |
 |---|---|
@@ -11,14 +11,15 @@
 | `medfig-render` | 按规格渲染单张图；自带 `lib/figkit`（配置、样式、QA、导出与各类 panel） |
 | `medfig-orchestrate` | 批量出多张图：并行 worktree、审查清单、台账与交付模板 |
 | `medfig-outline` | 图表定稿后写 Methods / Results 写作大纲（docx + md），数字对照 `source.json` 回核，并按小节归档图、表、图注与代码 |
+| `medfig-schematic` | 研究设计图 / 网络架构图：写生图模型（ChatGPT 等）的英文提示词，检查提示词、打包每一轮，评估返回的图，逐轮迭代到定稿 |
 | `scipilot-medimg-figure-skill` | 依赖技能：期刊样式、导出与文件自检脚本（`medfig-render` 调用），以及医学影像 panel（影像 + 掩膜 / 轮廓 / 热力图，JSON 规格驱动）。派生自 [Haojae/scipilot-figure-skill](https://github.com/Haojae/scipilot-figure-skill)（MIT），差异见其 `NOTICE.md` |
 
 ## 路由
 
 - 只要一张纯影像网格（已导出的 PNG/JPG/TIF + 掩膜/轮廓/热力图/放大框/比例尺，无统计图混排）→ `scipilot-medimg-figure-skill`。
-- 其他情况：还没有规格 → `medfig-plan`；已有规格、单张图 → `medfig-render`；图表定稿后写作大纲 → `medfig-outline`；多张图 → `medfig-orchestrate`（内部逐张调用 `medfig-render`）。
+- 其他情况：还没有规格 → `medfig-plan`；已有规格、单张图 → `medfig-render`；图表定稿后写作大纲 → `medfig-outline`；示意图 / 架构图 → `medfig-schematic`；多张图 → `medfig-orchestrate`（内部逐张调用 `medfig-render`）。
 
-示意图、流程图、架构图和非医学图表不在范围内。
+非医学图表、用代码直接画的示意图不在范围内。
 
 ## 前置条件
 
@@ -82,6 +83,7 @@ python -m pytest tests -q -p no:cacheprovider                 # 技能格式校�
 python -m pytest medfig-render/tests -q -p no:cacheprovider   # figkit 库、回归与最小示例
 python -m pytest medfig-orchestrate/tests -q -p no:cacheprovider
 python -m pytest medfig-outline/scripts -q -p no:cacheprovider
+python -m pytest medfig-schematic/scripts -q -p no:cacheprovider
 python -m pytest scipilot-medimg-figure-skill/tests -q -p no:cacheprovider   # 影像 panel / 样式 / 导出冒烟测试
 ```
 
