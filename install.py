@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Install the five medfig-* skills into agent skill roots (stdlib only).
+"""Install the five medfig-* skills and their dependency skill scipilot-medimg-figure-skill (stdlib only).
 
-Copies ONLY medfig-suite, medfig-plan, medfig-render, medfig-orchestrate, medfig-outline.
+Copies ONLY medfig-suite, medfig-plan, medfig-render, medfig-orchestrate, medfig-outline and
+scipilot-medimg-figure-skill (medfig-render calls its scripts/).
 Existing installs are moved to a timestamped backup before being replaced;
 nothing is ever deleted. After copying, every file is SHA-256 verified
 against the source and a `.medfig_install.json` stamp is written.
@@ -23,7 +24,8 @@ import sys
 from pathlib import Path
 
 SRC_ROOT = Path(__file__).resolve().parent
-SKILLS = ("medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline")
+SKILLS = ("medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline",
+          "scipilot-medimg-figure-skill")
 STAMP = ".medfig_install.json"
 
 EXCLUDED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".git"}

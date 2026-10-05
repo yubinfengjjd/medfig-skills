@@ -11,6 +11,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ["medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline"]
+# dependency skill derived from Haojae/scipilot-figure-skill (MIT): leak scan + forbidden-workflow scan only
+ALL_SKILLS = SKILLS + ["scipilot-medimg-figure-skill"]
 ALLOWED = {"name", "description", "license", "metadata"}
 # Project names / dataset names that must never appear in the skills: one per line in the git-ignored
 # tests/leak_strings.local.txt (kept out of the public repo), plus the generic markers below.
@@ -105,7 +107,7 @@ def test_reference_links_exist(name):
     assert not missing, f"{name}: missing referenced files {missing}"
 
 
-@pytest.mark.parametrize("name", SKILLS)
+@pytest.mark.parametrize("name", ALL_SKILLS)
 def test_no_project_data_leak(name):
     d = _skill_dir(name)
     hits = []
@@ -122,7 +124,7 @@ def test_no_project_data_leak(name):
     assert not hits, "project-data leak: " + "; ".join(hits)
 
 
-@pytest.mark.parametrize("name", SKILLS)
+@pytest.mark.parametrize("name", ALL_SKILLS)
 def test_no_forbidden_workflow_refs(name):
     d = _skill_dir(name)
     hits = []

@@ -15,17 +15,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "matplotlib==3.9.2" "numpy<2.2" "pandas<2.3" "scipy<1.15" "seaborn==0.13.2" \
-                      "pyyaml==6.0.2" "pytest==8.3.3" "statsmodels==0.14.4" "scikit-learn==1.5.2" \
-                      "python-docx==1.1.2"
-      # medfig-render calls the scripts of scipilot-medimg-figure-skill (a separate skill, MIT). CI uses
-      # the upstream scipilot-figure-skill scripts at the derivation baseline 43098dd at the default path.
-      - name: Install scipilot scripts
-        run: |
-          git clone -q https://github.com/Haojae/scipilot-figure-skill.git /tmp/scipilot
-          git -C /tmp/scipilot checkout -q 43098dd
-          mkdir -p ~/.claude/skills/scipilot-medimg-figure-skill
-          cp -r /tmp/scipilot/scripts ~/.claude/skills/scipilot-medimg-figure-skill/
+          pip install -r requirements-dev.txt
+      # Installs the five medfig skills and scipilot-medimg-figure-skill (the dependency medfig-render
+      # calls) into ~/.claude/skills and ~/.codex/skills, exactly as a user would.
+      - name: Install skills
+        run: python install.py
       - name: Install fonts
         run: |
           echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections

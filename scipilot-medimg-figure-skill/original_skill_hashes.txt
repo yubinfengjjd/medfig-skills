@@ -1,0 +1,8 @@
+# upstream baseline: scipilot-figure-skill @43098dd (Haojae/scipilot-figure-skill)
+# sha256 of inherited files; generated after copy
+cd997052a62cbd0673a9c13297d3936ff896facd6d12a345077c85587ad1f59e  scripts/check_figure.py
+3a6796583e2cd27af54e27672c816ce64f449dc704d377eda69c74a37267ee23  scripts/export_figure.py
+53c929d9dbc50db7108105a8dd4ff6d271b6b959a14701073bdab524470d019c  scripts/layout_tools.py
+d8364fd9cc041be9a207b61b7329fb0de43ba7beee31a4ba67739b2259970947  scripts/profile_data.py
+caa3262f706e10378bf2bd5cc92d04714e259c65ec0325fdfd91c1090b7e172e  scripts/setup_style.py
+5f2cee32985f8d90993fc2193d70f513fcec851f9e40890e2ceb1e5522cf5baf  scripts/visual_qa.py

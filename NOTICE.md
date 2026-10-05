@@ -13,6 +13,10 @@ medfig-skills 以 MIT 许可证发布（见 `LICENSE`）。以下部分借用或
 | [senlanke/figures4papers](https://github.com/senlanke/figures4papers) | 未声明 | soft 主题的视觉风格 | 只借鉴风格，未使用其代码 |
 | [myzhao0114-del/scientific-figure-skill](https://github.com/myzhao0114-del/scientific-figure-skill) | 未声明 | `medfig-plan/scripts/data_health.py` | 只借鉴思路，未使用其代码 |
 
-## 运行时依赖
+## 包含的第三方技能
 
-`medfig-render` 的样式和导出调用 **scipilot-medimg-figure-skill** 的脚本（`setup_style.py`、`export_figure.py`、`check_figure.py` 等）。该技能派生自 [Haojae/scipilot-figure-skill](https://github.com/Haojae/scipilot-figure-skill)（MIT），需另行安装，本仓库不包含它的代码。
+`scipilot-medimg-figure-skill/` 派生自 [Haojae/scipilot-figure-skill](https://github.com/Haojae/scipilot-figure-skill)
+v2.1.0（commit `43098dd`，MIT，© 2026 Haojae），原许可证见 `scipilot-medimg-figure-skill/LICENSE`。
+新增的医学影像 panel 脚本与文档、对上游文件的修改，逐项列在 `scipilot-medimg-figure-skill/NOTICE.md`；
+继承文件的上游哈希见 `original_skill_hashes.txt`。`medfig-render` 的样式和导出调用它的脚本
+（`setup_style.py`、`export_figure.py`、`check_figure.py` 等），由 `install.py` 一起安装。

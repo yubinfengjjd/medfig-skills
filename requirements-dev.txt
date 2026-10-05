@@ -1,0 +1,6 @@
+# Test-only dependencies (on top of requirements.txt):  pip install -r requirements-dev.txt
+-r requirements.txt
+pytest==8.3.3
+statsmodels==0.14.4     # cross-checks stats.bland_altman against statsmodels
+scikit-learn==1.5.2     # cross-checks ROC / PR curves against sklearn.metrics
+scikit-image==0.24.0    # cross-checks style.delta_e against skimage CIEDE2000

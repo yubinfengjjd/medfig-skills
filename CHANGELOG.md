@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 (2026-10-05)
+
+- 仓库现在包含依赖技能 `scipilot-medimg-figure-skill`（派生自 Haojae/scipilot-figure-skill @43098dd，MIT），`install.py` 与五个 medfig 技能一起安装，不再需要另外下载。
+  - 新增合成数据冒烟测试：影像 panel 渲染与导出、"类别语义不猜""掩膜不缩放"两条拦截、样式 / 导出 / 文件自检。
+  - 文档清理：示例键名改为中性名称，README 安装说明改为本仓库。
+- 新增仓库级 `requirements.txt`（运行）与 `requirements-dev.txt`（测试），版本固定为测试通过的组合。
+- CI 改为 `pip install -r requirements-dev.txt` + `python install.py`，与用户安装方式一致，不再克隆上游。
+
 ## 0.2.0 (2026-10-07)
 
 - 新技能 `medfig-outline`：图表定稿后生成 Methods / Results 写作大纲（`写作大纲.docx` + `.md`），并把每个小节引用的图、表、图注和代码拷贝到项目外的分节文件夹。
