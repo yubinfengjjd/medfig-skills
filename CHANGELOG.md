@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 (2026-10-07)
+
+- `medfig-outline` 引用次序闸门：按阅读顺序（Methods → Results），主图、主表、附图、附表各自按首次引用从 1 连续编号，图内 panel 从 a 开始依次首次引用；次序不对时给出"旧 → 新"改号建议。骨架确认时把改号表交给用户，确认后回 medfig-render 改图再写大纲。
+- 全覆盖：正文与补充材料的每张图、每个 panel、每张表都必须被引用，不进稿件的写进 `excluded` 并给理由；检查脚本打印 `coverage: N/N`，大纲末尾生成"图表引用清单"表。
+- Methods 只能引用设计资产（`design_assets`：数据集表、研究设计图、方法类附表），其余结果在 Results 首次引用；外部绘制、尚未导出的图用 `pending` 声明。
+- 大纲不再列出或拷贝绘图 / 表格脚本，代码只列分析代码；每个被引用的图表配一行"图 / 表"，写它在科学上说明什么。
+- `medfig-plan`：编号跟正文首次引用走，panel 按叙述顺序从 a 排。
+
 ## 0.3.0 (2026-10-05)
 
 - 仓库现在包含依赖技能 `scipilot-medimg-figure-skill`（派生自 Haojae/scipilot-figure-skill @43098dd，MIT），`install.py` 与五个 medfig 技能一起安装，不再需要另外下载。

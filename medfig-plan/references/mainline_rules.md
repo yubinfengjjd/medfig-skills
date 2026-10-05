@@ -6,7 +6,7 @@
 
 1. **只呈现主线。** 规格 §0 的"版本清单"指定唯一的主线模型 / 分析版本。早期版本、失败的旧方案、修复前的模型、内部开发阶段的产物一律**丢弃**：不进图、表、图注、写作大纲，不当对照、补充实验或"修复前后"比较，也不在正文里提及。
 2. **按科学问题组织，不按内部计划组织。** 按内部计划编号组织的分析（如"预注册假设 H1–H5"、终点 E0/E1/E2、规则 R0–R5、设计项 D2/D4），一律改写成该分析回答的科学问题与结果描述（例如"概念瓶颈是否缩小内外部差距：无明确差异"），不出现"预注册 / 假设状态 / closeout"。
-3. **不写开发流程。** 图、表、图注、大纲里不出现 wave、closure、closeout、repair / 修复、refit / 重拟合、historical / 早期版本、reconciliation / 口径裁决、post-outcome exploratory 之类的开发史词汇，也不出现带这些词的文件路径（写作大纲里"关联代码 / 相关代码"一栏只给作者自己对照，保留真实文件路径）。研究的探索性质只在稿件 Methods 的统计部分用标准写法交代一次（例如 "Analyses beyond the primary endpoint were exploratory."），不逐图重复。
+3. **不写开发流程。** 图、表、图注、大纲里不出现 wave、closure、closeout、repair / 修复、refit / 重拟合、historical / 早期版本、reconciliation / 口径裁决、post-outcome exploratory 之类的开发史词汇，也不出现带这些词的文件路径（写作大纲里"关联代码 / 相关代码"一栏只列分析代码给作者自己对照，保留真实文件路径；绘图 / 表格脚本不列）。研究的探索性质只在稿件 Methods 的统计部分用标准写法交代一次（例如 "Analyses beyond the primary endpoint were exploratory."），不逐图重复。
 4. **规划时一次问清。** 版本清单是 medfig-plan 第 2 步的必问项；用户已经回答过的不再重复问。用户没答之前，不渲染任何涉及版本比较的 panel。
 
 ## 2. 落实方式

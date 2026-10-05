@@ -46,20 +46,21 @@ def _outline(**over):
         "captions": ["docs/captions_zh.md", "docs/captions"], "main_figures": ["fig2", "fig3"],
         "methods": [{"id": "2.1", "title": "Cohorts and evaluation", "short": "Cohorts",
                      "focus": [{"topic": "研究设计", "points": ["多中心回顾性研究；三分类（内部代号 E2）", "说明外部队列不参与训练"]}],
-                     "items": ["T1"], "code": [{"path": "tables/build_tables.py", "role": "表格"}]}],
+                     "items": [{"ref": "T1", "what": "各队列规模与角色"}, {"ref": "Fig1", "what": "研究设计与数据流"}],
+                     "code": [{"path": "src/splits.py", "role": "计算", "guess": True}]}],
+        "design_assets": ["T1", "Fig1"], "pending": ["Fig1"],
         "results": [
             {"id": "3.1", "title": "Cohorts separate in the backbone representation", "subtitle": "队列在骨干表示中分开",
              "short": "Domain_shift",
              "paragraphs": [{"label": "第一段", "claim": "骨干层面队列可区分",
                              "points": ["域可辨识性 AUC 约 0.983，n = 13,859", "说明 PCA 只在内部拟合"], "cites": ["Fig2a-b", "T1"]}],
-             "items": [{"ref": "Fig2a", "what": "PCA"}], "boundaries": ["不写设备因果"],
-             "code": [{"path": "figures/main/fig2.py", "role": "绘图"},
-                      {"path": "src/eval.py", "role": "计算", "guess": True}]},
+             "items": [{"ref": "Fig2", "what": "外部队列在骨干表示中各自成簇"}], "boundaries": ["不写设备因果"],
+             "code": [{"path": "src/eval.py", "role": "计算", "guess": True}]},
             {"id": "3.2", "title": "Edema recall is high internally", "subtitle": "内部 Edema 召回率高",
              "short": "Internal", "paragraphs": [{"label": "第一段", "claim": "召回高",
                                                    "points": ["Edema 召回率 92.7%；内部 BACC 约 0.96", "说明主要错误方向"],
                                                    "cites": ["Fig3a", "T1"]}],
-             "items": [{"ref": "Fig3a", "what": "recall"}], "code": []}],
+             "items": [{"ref": "Fig3a", "what": "三类召回都高"}], "code": []}],
         "numbers": [{"text": "0.983", "source": "fig2.source.json:values.auc.all"},
                     {"text": "13,859", "source": "fig2.source.json:values.n"},
                     {"text": "92.7%", "source": "fig3.source.json:values.recall.Edema"},
@@ -150,7 +151,8 @@ def test_build_docx_md_and_folders(proj, tmp_path):
     r31 = out / "3_Results/3.1_Domain_shift"
     assert (r31 / "figures/fig2.pdf").is_file() and (r31 / "figures/fig2.source.json").is_file()
     assert (r31 / "tables/T1.csv").is_file() and (r31 / "tables/T1.md").is_file()
-    assert (r31 / "captions/fig2.md").is_file() and (r31 / "code/fig2.py").is_file()
+    assert (r31 / "captions/fig2.md").is_file()
+    assert not (r31 / "code/fig2.py").exists()  # plotting scripts are not part of the method
     assert "src/eval.py（推测）" in (r31 / "code/code.md").read_text(encoding="utf-8")
     assert (out / "2_Methods/2.1_Cohorts/tables/T1.csv").is_file()
     cap3 = (out / "3_Results/3.2_Internal/captions/fig3.md").read_text(encoding="utf-8")
@@ -210,7 +212,8 @@ def test_build_puts_citation_on_the_paragraph_line(proj, tmp_path):
     text = [p.text for p in docx.Document(res["docx"]).paragraphs]
     assert "第一段：骨干层面队列可区分（Fig 2a-b、Table 1）" in text
     assert not any(t.startswith("引用：") for t in text)
-    assert "绘图：figures/main/fig2.py" in text
+    assert "计算：src/eval.py（推测）" in text and not any("绘图" in t for t in text)
+    assert "Fig 1（外部绘制，待交付）：研究设计与数据流" in text
 
 
 def test_style_range_counts_as_one_number(proj, tmp_path):
@@ -286,3 +289,112 @@ def test_results_section_count_range(proj, tmp_path):
     sec = o["results"][1]
     o["results"] = [dict(sec, id=f"3.{k}", short=f"S{k}") for k in range(1, 10)]
     assert any("9 top-level Results sections (max 8)" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+# ---- citation order (outline_format.md section 7)
+def _issues(proj, tmp_path, o):
+    return outline_check.check(_write(tmp_path, o), proj)
+
+
+def test_panels_first_cited_in_letter_order(proj, tmp_path):
+    o = _outline()
+    o["results"][0]["paragraphs"][0]["cites"] = ["Fig2b", "T1"]
+    o["results"][0]["paragraphs"][0]["points"][1] = "说明 PCA 只在内部拟合（Fig 2a）"
+    out = _issues(proj, tmp_path, o)
+    assert any("first cites Fig 2b before Fig 2a" in i for i in out)
+    o["results"][0]["paragraphs"][0]["cites"] = ["Fig2a", "T1"]
+    o["results"][0]["paragraphs"][0]["points"][1] = "说明 PCA 只在内部拟合（Fig 2b）"
+    assert not any("order:" in i for i in _issues(proj, tmp_path, o))
+
+
+def test_figures_first_cited_in_number_order_with_renumber_plan(proj, tmp_path):
+    o = _outline()
+    o["results"][0]["paragraphs"][0]["cites"] = ["Fig3a", "Fig2a-b", "T1"]
+    out = _issues(proj, tmp_path, o)
+    hit = [i for i in out if i.startswith("order: main figs")]
+    assert hit and "Fig 1, Fig 3, Fig 2" in hit[0] and "Fig 3 → Fig 2" in hit[0] and "Fig 2 → Fig 3" in hit[0]
+
+
+def test_text_mentions_count_as_citations(proj, tmp_path):
+    o = _outline()
+    o["results"][0]["paragraphs"][0]["cites"] = ["T1"]
+    o["results"][0]["paragraphs"][0]["points"][1] = "对比 Fig 3a 的召回与 Fig 2a–b 的分布"
+    assert any("main figs are first cited as Fig 1, Fig 3, Fig 2" in i for i in _issues(proj, tmp_path, o))
+
+
+def test_supp_series_uncited_assets_and_excluded(proj, tmp_path):
+    (proj / "out/figures/supp").mkdir()
+    for name in ("s01", "s02"):
+        (proj / f"out/figures/supp/{name}.source.json").write_text(
+            json.dumps({"values": {"panels": [{"id": "a"}, {"id": "b"}]}}), encoding="utf-8")
+    (proj / "out/tables/ST01.csv").write_text("x\n1\n", encoding="utf-8")
+    o = _outline()
+    out = _issues(proj, tmp_path, o)
+    assert any("Fig S1 is exported but never cited" in i for i in out)
+    assert any("Table S1 is exported but never cited" in i for i in out)
+    p = o["results"][1]["paragraphs"][0]
+    p["cites"] = ["Fig3a", "S2", "S1a", "T1"]
+    o["results"][1]["items"] += [{"ref": "S1", "what": "重复处理规则"}, {"ref": "S2", "what": "逐 seed 稳定"}]
+    o["excluded"] = [{"ref": "ST01", "reason": "溯源索引，不进稿件"}]
+    out = _issues(proj, tmp_path, o)
+    assert any("supp figs are first cited as Fig S2, Fig S1" in i for i in out)
+    assert any("Fig S1 panel(s) b never cited" in i for i in out)
+    assert not any("Table S1" in i for i in out)
+    o["excluded"] = ["ST01"]
+    assert any("excluded 'ST01': give a reason" in i for i in _issues(proj, tmp_path, o))
+
+
+def test_methods_cite_only_design_assets(proj, tmp_path):
+    o = _outline()
+    o["methods"][0]["focus"][0]["points"][1] = "说明外部队列不参与训练，召回见 Fig 3a"
+    out = _issues(proj, tmp_path, o)
+    assert any("Methods 2.1 cites Fig 3; Methods may cite only design_assets" in i for i in out)
+    o = _outline(design_assets=["T1"])
+    assert any("Methods 2.1 cites Fig 1" in i for i in _issues(proj, tmp_path, o))
+
+
+def test_items_say_what_and_code_has_no_plot_scripts(proj, tmp_path):
+    o = _outline()
+    o["results"][1]["items"] = []
+    o["results"][0]["items"] = [{"ref": "Fig2", "what": "由 fig2.py 绘制"}, {"ref": "Fig3", "what": "x"}]
+    o["results"][0]["code"].append({"path": "figures/main/fig2.py", "role": "绘图"})
+    o["methods"][0]["code"].append({"path": "tables/build_tables.py", "role": "表格"})
+    out = _issues(proj, tmp_path, o)
+    assert any("Results 3.1 Fig2: say what it shows scientifically" in i for i in out)
+    assert any("Results 3.1 lists Fig 3 but its paragraphs do not cite it" in i for i in out)
+    assert any("code: Results 3.1 lists figures/main/fig2.py" in i for i in out)
+    assert any("code: Methods 2.1 lists tables/build_tables.py" in i for i in out)
+
+
+def test_coverage_table_lists_every_asset(proj, tmp_path):
+    (proj / "out/figures/supp").mkdir()
+    (proj / "out/figures/supp/s01.source.json").write_text(json.dumps({"values": {"panels": [{"id": "a"}]}}),
+                                                           encoding="utf-8")
+    (proj / "out/tables/ST01.csv").write_text("x\n1\n", encoding="utf-8")
+    o = _outline(excluded=[{"ref": "ST01", "reason": "溯源索引"}])
+    rows = outline_check.coverage(o, proj)
+    st = {r[0]: r[4] for r in rows}
+    assert st == {"Fig 1": "pending", "Fig 2": "cited", "Fig 3": "cited", "Table 1": "cited",
+                  "Fig S1": "NOT CITED", "Table S1": "excluded: 溯源索引"}
+    assert [r[0] for r in rows] == ["Fig 1", "Fig 2", "Fig 3", "Table 1", "Fig S1", "Table S1"]
+    assert any("Fig S1 is exported but never cited" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+def test_build_writes_coverage_table(proj, tmp_path):
+    res = outline_build.build(_write(tmp_path, _outline()), proj, tmp_path / "o5")
+    md = Path(res["md"]).read_text(encoding="utf-8")
+    assert "## 图表引用清单" in md and "| Fig 2 | a,b | 3.1 | 3.1 | 已引用 |" in md
+    assert "| Fig 1 | — | 2.1 | 2.1 | 已引用（外部绘制，待交付） |" in md
+    import docx
+    t = docx.Document(res["docx"]).tables[-1]
+    assert t.rows[0].cells[4].text == "状态" and len(t.rows) == 5
+
+
+def test_figure_without_panel_list_is_flagged(proj, tmp_path):
+    src = proj / "out/figures/main/fig3.source.json"
+    d = json.loads(src.read_text(encoding="utf-8")); d["values"].pop("panels")
+    src.write_text(json.dumps(d), encoding="utf-8")
+    o = _outline()
+    o["results"][1]["paragraphs"][0]["cites"] = ["Fig3", "T1"]
+    o["results"][1]["items"] = [{"ref": "Fig3", "what": "三类召回都高"}]
+    assert any("Fig 3 has no panel list" in i for i in outline_check.check(_write(tmp_path, o), proj))

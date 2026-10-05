@@ -15,6 +15,7 @@
   {"query": "Draft the section-by-section outline of the paper's results from the figure deliverables", "should_trigger": true},
   {"query": "每张主图对应一个结果小节，帮我写大纲并把文件按节拷贝出来", "should_trigger": true},
   {"query": "把补充图表穿插进结果大纲里，标出每段引用", "should_trigger": true},
+  {"query": "写作大纲里 Figure 和 panel 的引用顺序乱了，按首次引用重新排一下编号", "should_trigger": true},
   {"query": "帮我规划整套图表，哪些是主图哪些是附图", "should_trigger": false},
   {"query": "这张 ROC 图帮我画出来", "should_trigger": false},
   {"query": "Write the Introduction for my OCT paper", "should_trigger": false},

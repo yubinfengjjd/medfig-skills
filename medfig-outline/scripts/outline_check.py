@@ -5,6 +5,11 @@ written decimals); every number written in a Results paragraph is registered; ev
 exists; every main figure is covered by a Results section; Methods ``focus`` has no result numbers; Results
 titles are one-sentence findings without numbers; banned words, development history and project code
 patterns (``figkit.toml [qa] forbidden_patterns``; allowed only inside "（内部代号 …）") never appear.
+Citation order (outline_format.md section 7): in reading order (Methods, then Results) main figures, main
+tables, supplementary figures and supplementary tables are each first cited 1, 2, 3 ... and the panels of a
+figure a, b, c ...; every exported asset and panel is cited (or listed under ``excluded`` with a reason);
+Methods cite only ``design_assets``; every asset has a 图 / 表 line saying what it shows scientifically;
+no plotting / table-building script is listed as code.
 
 Usage: python outline_check.py outline.yaml --project <root> [--figkit-toml <toml>]
 Exit 1 when any issue is found. Only reads.
@@ -29,6 +34,10 @@ DEV_ZH = {"预注册": r"预注册", "早期版本": r"早期(?:版本|模型)",
           "重拟合": r"重拟合", "口径裁决": r"口径裁决", "开发阶段": r"开发(?:阶段|日志|日记)"}
 NUM = re.compile(r"(?<![\w./])[+−-]?\d[\d,]*(?:\.\d+)?(?:/\d+)?%?")
 REF = re.compile(r"^(Fig|S)(\d+)([a-z](?:-[a-z])?)?$|^(T\d+|ST\d+)$")
+# citations written inside point text: "Fig 3a", "Fig S5b–c", "Table 2", "Table S5", "图 S1", "表 2"
+TEXT_REF = re.compile(r"(?:Fig\.?|Figure|图)\s?(S?)(\d+)([a-z](?:[–-][a-z])?)?(?![\w])|(?:Table|表)\s?(S?)(\d+)(?!\d)")
+DRAW_ROLES = {"绘图", "表格"}
+DRAW_PATH = re.compile(r"^(?:figures|tables)/")
 CODE_NOTE = re.compile(r"（内部代号[^）]*）")
 VAGUE_TITLE = re.compile(r"^(?:results? of|overview of|analysis of|performance of|.* results?)\b", re.I)
 
@@ -130,6 +139,207 @@ def _expand(ref):
     return [(name, letters)]
 
 
+def _text_refs(text):
+    """Canonical refs ('Fig3a', 'S5b-c', 'T2', 'ST05') mentioned inside prose, in order of appearance."""
+    out = []
+    for m in TEXT_REF.finditer(text or ""):
+        if m.group(2):
+            letters = (m.group(3) or "").replace("–", "-")
+            out.append(("S" if m.group(1) else "Fig") + m.group(2) + letters)
+        else:
+            out.append((f"ST{int(m.group(5)):02d}" if m.group(4) else f"T{int(m.group(5))}"))
+    return out
+
+
+def _series(name):
+    """('main_fig' | 'supp_fig' | 'main_table' | 'supp_table', number) of a canonical asset name."""
+    if name.startswith("fig"):
+        return "main_fig", int(name[3:])
+    if name.startswith("ST"):
+        return "supp_table", int(name[2:])
+    if name.startswith("T"):
+        return "main_table", int(name[1:])
+    return "supp_fig", int(name[1:])
+
+
+def _asset(name, letter):
+    """Asset key for an expanded ref: fig2 / s05 for figures, T1 / ST05 for tables."""
+    return letter if name == "table" else name
+
+
+def _pretty(asset):
+    kind, n = _series(asset)
+    return {"main_fig": f"Fig {n}", "supp_fig": f"Fig S{n}", "main_table": f"Table {n}", "supp_table": f"Table S{n}"}[kind]
+
+
+def _reading_order(o):
+    """(section id, kind, ref) for every citation in reading order: Methods then Results, depth first; inside a
+    Results paragraph the claim's cites come first, then refs written in its points; a Methods section cites the
+    refs written in its ``focus`` first, then its ``cites`` and ``items`` (Methods have no paragraphs)."""
+    for kind, secs in (("Methods", o.get("methods", [])), ("Results", o.get("results", []))):
+        for sec in _nodes(secs):
+            if kind == "Methods":
+                refs = []
+                for blk in sec.get("focus", []):
+                    for t in blk.get("points", []):
+                        refs += _text_refs(t)
+                refs += list(sec.get("cites", []))
+                refs += [i["ref"] if isinstance(i, dict) else i for i in sec.get("items", [])]
+                yield from ((sec["id"], kind, r) for r in refs)
+            for p in sec.get("paragraphs", []):
+                refs = list(p.get("cites", []))
+                refs += _text_refs(p.get("claim", ""))
+                for t in p.get("points", []):
+                    refs += _text_refs(t)
+                yield from ((sec["id"], kind, r) for r in refs)
+
+
+def _exported(root, o):
+    """{asset: [panel ids]} for every figure source.json and table csv in the project."""
+    found = {}
+    for src in sorted((root / o["figures_root"]).glob("**/*.source.json")):
+        name = src.name[: -len(".source.json")]
+        if re.fullmatch(r"fig\d+|s\d+", name):
+            found[name] = sorted(_panel_ids(src))
+    for f in sorted((root / o["tables_root"]).glob("*.csv")):
+        if re.fullmatch(r"S?T\d+", f.stem):
+            found[f.stem] = []
+    return found
+
+
+def _order(o, root):
+    """Citation-order, completeness and Methods-scope gates (outline_format.md section 7)."""
+    out = []
+    pending = {_asset(n, l) for r in o.get("pending", []) for n, l in (_expand(r) or [])}
+    design = {_asset(n, l) for r in o.get("design_assets", []) for n, l in (_expand(r) or [])}
+    excluded = {}
+    for e in o.get("excluded", []):
+        ref = e.get("ref") if isinstance(e, dict) else e
+        if not (isinstance(e, dict) and str(e.get("reason", "")).strip()):
+            out.append(f"excluded {ref!r}: give a reason (why it is not in the manuscript)")
+        excluded.update({_asset(n, l): ref for n, l in (_expand(ref) or [])})
+    first, seen_panels, panels_cited = {}, {}, {}
+    exported = _exported(root, o)
+    for sid, kind, ref in _reading_order(o):
+        ex = _expand(ref)
+        if not ex:
+            continue
+        for name, letter in ex:
+            asset = _asset(name, letter)
+            if kind == "Methods" and asset not in design:
+                out.append(f"order: Methods {sid} cites {_pretty(asset)}; Methods may cite only design_assets "
+                           f"(dataset table, study-design figure, method-type supp tables) -- results go in Results")
+            first.setdefault(asset, (sid, kind))
+            if name == "table" or asset in pending or asset not in exported:
+                continue
+            ids = exported[asset]
+            if letter is None:
+                seen = seen_panels.setdefault(asset, [])
+                seen += [i for i in ids if i not in seen]
+                panels_cited.setdefault(asset, set()).update(ids)
+                continue
+            seen = seen_panels.setdefault(asset, [])
+            panels_cited.setdefault(asset, set()).add(letter)
+            if letter in seen:
+                continue
+            expect = next((i for i in ids if i not in seen), None)
+            if expect is not None and letter != expect:
+                out.append(f"order: {sid} first cites {_pretty(asset)}{letter} before {_pretty(asset)}{expect}; panels "
+                           f"are first cited a, b, c ... -- reorder the narrative or relabel the panels")
+            seen.append(letter)
+    by_series = {}
+    for asset in first:
+        k, n = _series(asset)
+        by_series.setdefault(k, []).append((n, asset))
+    for k, seq in by_series.items():
+        nums = [n for n, _ in seq]
+        if nums != list(range(1, len(nums) + 1)):
+            stem = {"main_fig": "Fig ", "supp_fig": "Fig S", "main_table": "Table ", "supp_table": "Table S"}[k]
+            plan = ", ".join(f"{_pretty(a)} → {stem}{i}" for i, (n, a) in enumerate(seq, 1) if n != i)
+            out.append(f"order: {k.replace('_', ' ')}s are first cited as "
+                       f"{', '.join(_pretty(a) for _, a in seq)}; number them in first-citation order "
+                       f"(renumber: {plan or 'fill the gaps'})")
+    for asset, ids in exported.items():
+        if asset in excluded:
+            continue
+        if asset not in first:
+            out.append(f"order: {_pretty(asset)} is exported but never cited; cite it where it belongs or list it "
+                       "under excluded with a reason")
+            continue
+        missing = [i for i in ids if i not in panels_cited.get(asset, set())]
+        if missing and asset not in pending:
+            out.append(f"order: {_pretty(asset)} panel(s) {', '.join(missing)} never cited")
+    for asset in design - set(first):
+        out.append(f"order: design asset {_pretty(asset)} is never cited in Methods")
+    for asset in pending - set(first) - design:
+        out.append(f"order: pending {_pretty(asset)} is never cited; cite it where it belongs")
+    for asset, ids in exported.items():
+        if not ids and not asset.startswith(("T", "ST")) and asset not in excluded:
+            out.append(f"order: {_pretty(asset)} has no panel list in its source.json; panel coverage cannot be "
+                       "checked (re-export with figkit, which records values.panels)")
+    return out, first
+
+
+def coverage(o, root):
+    """Every manuscript asset in numbering order: (label, panels, first section, all citing sections, status).
+    Status is 'cited', 'pending' (drawn outside the pipeline), 'excluded: <reason>' or 'NOT CITED'."""
+    root = Path(root)
+    exported = _exported(root, o)
+    pending = {_asset(n, l) for r in o.get("pending", []) for n, l in (_expand(r) or [])}
+    reasons = {}
+    for e in o.get("excluded", []):
+        ref = e.get("ref") if isinstance(e, dict) else e
+        for n, l in _expand(ref) or []:
+            reasons[_asset(n, l)] = str(e.get("reason", "")) if isinstance(e, dict) else ""
+    secs = {}
+    for sid, _, ref in _reading_order(o):
+        for n, l in _expand(ref) or []:
+            s = secs.setdefault(_asset(n, l), [])
+            if sid not in s:
+                s.append(sid)
+    order = ["main_fig", "main_table", "supp_fig", "supp_table"]
+    rows = []
+    for a in sorted(set(exported) | set(secs) | pending | set(reasons), key=lambda a: (order.index(_series(a)[0]),
+                                                                                         _series(a)[1])):
+        status = ("excluded: " + reasons[a] if a in reasons else "cited" if a in secs and a not in pending
+                  else "pending" if a in pending else "NOT CITED")
+        rows.append((_pretty(a), ",".join(exported.get(a, [])), (secs.get(a) or ["—"])[0], secs.get(a, []), status))
+    return rows
+
+
+def _items_and_code(o, first):
+    """Every cited asset gets one 图 / 表 line (what it shows scientifically) in the section that first cites it;
+    an item must be cited in its own section; plotting / table scripts are not code to cite."""
+    out = []
+    listed = {}
+    for kind, secs in (("Methods", o.get("methods", [])), ("Results", o.get("results", []))):
+        for sec in _nodes(secs):
+            cited = set()
+            for sid, _, ref in _reading_order({kind.lower(): [dict(sec, subsections=[])]}):
+                cited |= {_asset(n, l) for n, l in (_expand(ref) or [])}
+            for it in sec.get("items", []):
+                if not isinstance(it, dict):
+                    continue
+                assets = {_asset(n, l) for n, l in (_expand(it.get("ref", "")) or [])}
+                for a in assets:
+                    listed.setdefault(a, sec["id"])
+                    if a not in cited:
+                        out.append(f"items: {kind} {sec['id']} lists {_pretty(a)} but its paragraphs do not cite it")
+                what = str(it.get("what", ""))
+                if not what.strip() or re.search(r"\.py\b|脚本|script", what, re.I):
+                    out.append(f"items: {kind} {sec['id']} {it.get('ref')}: say what it shows scientifically, "
+                               "not how it was drawn")
+            for c in sec.get("code", []):
+                if c.get("role") in DRAW_ROLES or DRAW_PATH.match(str(c.get("path", ""))):
+                    out.append(f"code: {kind} {sec['id']} lists {c.get('path')} ({c.get('role')}); plotting / "
+                               "table scripts are not part of the method -- cite the figure / table instead")
+    for asset, (sid, kind) in first.items():
+        if asset not in listed:
+            out.append(f"items: {_pretty(asset)} has no 图 / 表 line; add one in {kind} {sid} (first citation) "
+                       "saying what it shows")
+    return out
+
+
 def _source_json(root, figures_root, name):
     hits = list((root / figures_root).glob(f"*/{name}.source.json")) + list((root / figures_root).glob(f"{name}.source.json"))
     return hits[0] if hits else None
@@ -195,7 +405,8 @@ def _matches(written, value, tol=None, magnitude=False):
 
 def _strip_refs(text):
     """Remove panel / table / section references and ordinal labels before scanning for numbers."""
-    t = re.sub(r"\b(?:Fig|S|ST|T)\s?\d+[a-z]?(?:[–-][a-z])?\b", " ", text)
+    t = TEXT_REF.sub(" ", text)
+    t = re.sub(r"\b(?:Fig|S|ST|T)\s?\d+[a-z]?(?:[–-][a-z])?\b", " ", t)
     t = re.sub(r"\b\d+\.\d+\s*节", " ", t)
     t = re.sub(r"\b[0-9]+ ?(?:个|种|类|项|名|张|组|级|段|seed|seeds|折)\b", lambda m: m.group(0), t)
     return t
@@ -234,9 +445,10 @@ def check(outline_path, project, figkit_toml=None):
                     out.append(f"{where}: number {m!r} not registered in numbers")
     # ---- references and coverage
     covered = set()
+    pending = {_asset(n, l) for r in o.get("pending", []) for n, l in (_expand(r) or [])}
     for results, secs in ((False, _nodes(o.get("methods", []))), (True, _nodes(o.get("results", [])))):
         for sec in secs:
-            refs = list(sec.get("items", [])) if not results else [i["ref"] for i in sec.get("items", [])]
+            refs = [i["ref"] if isinstance(i, dict) else i for i in sec.get("items", [])] + list(sec.get("cites", []))
             for p in sec.get("paragraphs", []):
                 refs += p.get("cites", [])
             for ref in refs:
@@ -245,6 +457,8 @@ def check(outline_path, project, figkit_toml=None):
                     out.append(f"{sec['id']}: reference {ref!r} not understood (Fig2a, Fig2a-c, S5, T1, ST05)")
                     continue
                 for name, letter in ex:
+                    if _asset(name, letter) in pending:
+                        continue  # declared, drawn outside the pipeline (e.g. study-design schematic)
                     if name == "table":
                         if not (root / o["tables_root"] / f"{letter}.csv").is_file():
                             out.append(f"{sec['id']}: table {ref} not found")
@@ -257,8 +471,9 @@ def check(outline_path, project, figkit_toml=None):
                         covered.add(name)
                     if letter and letter not in _panel_ids(src):
                         out.append(f"{sec['id']}: panel {ref} not found ({name} has {sorted(_panel_ids(src))})")
+    design = {_asset(n, l) for r in o.get("design_assets", []) for n, l in (_expand(r) or [])}
     for f in o.get("main_figures", []):
-        if f not in covered:
+        if f not in covered and f not in design:
             out.append(f"main figure {f} not covered by any Results section")
     # ---- Methods without result numbers
     for sec in _nodes(o.get("methods", [])):
@@ -293,6 +508,8 @@ def check(outline_path, project, figkit_toml=None):
     # ---- style: an outline is writing guidance, not a data dump (references/outline_format.md §5)
     out += _style(o)
     out += _structure(o, {**STYLE, **(o.get("style") or {})})
+    order, first = _order(o, root)
+    out += order + _items_and_code(o, first)
     return out
 
 
@@ -355,6 +572,10 @@ def main(argv=None):
     issues = check(a.outline, a.project, a.figkit_toml)
     for i in issues:
         print(i)
+    rows = coverage(yaml.safe_load(Path(a.outline).read_text(encoding="utf-8")), a.project)
+    cited = sum(r[4] in ("cited", "pending") for r in rows)
+    print(f"coverage: {cited}/{len(rows)} manuscript assets cited "
+          f"({sum(r[4].startswith('excluded') for r in rows)} excluded)")
     print(f"{len(issues)} issue(s)")
     return 1 if issues else 0
 

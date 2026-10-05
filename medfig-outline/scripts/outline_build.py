@@ -23,7 +23,7 @@ ROLE_ORDER = ["计算", "绘图", "表格"]
 
 # ------------------------------------------------------------------------------------------------ model
 def _refs(sec, results):
-    refs = [i["ref"] for i in sec.get("items", [])] if results else list(sec.get("items", []))
+    refs = [i["ref"] if isinstance(i, dict) else i for i in sec.get("items", [])] + list(sec.get("cites", []))
     for p in sec.get("paragraphs", []):
         refs += p.get("cites", [])
     figs, tabs = [], []
@@ -31,6 +31,15 @@ def _refs(sec, results):
         for name, letter in outline_check._expand(r) or []:
             (tabs if name == "table" else figs).append(letter if name == "table" else name)
     return list(dict.fromkeys(figs)), list(dict.fromkeys(tabs))
+
+
+def _items(sec):
+    return [i for i in sec.get("items", []) if isinstance(i, dict)]
+
+
+def _item_line(i, pending):
+    tag = "（外部绘制，待交付）" if outline_check._asset(*(outline_check._expand(i["ref"]) or [("", "")])[0]) in pending else ""
+    return f"{_pretty_ref(i['ref'])}{tag}：{i.get('what', '')}"
 
 
 def _label(p):
@@ -72,7 +81,7 @@ def _walk(secs):
     yield from outline_check._tree(secs)
 
 
-def _md_body(sec, results):
+def _md_body(sec, results, pending=frozenset()):
     L = []
     if not results:
         if sec.get("focus"):
@@ -82,6 +91,8 @@ def _md_body(sec, results):
                 L += [f"  - {t}" for t in blk.get("points", [])]
         if sec.get("foreshadow"):
             L += ["", "**为后文铺垫：**", ""] + [f"- {t}" for t in sec["foreshadow"]]
+        if _items(sec):
+            L += ["", "**引用图 / 表：**", ""] + [f"- {_item_line(i, pending)}" for i in _items(sec)]
         if sec.get("code"):
             L += ["", "**关联代码（只作为你脑内映射）：**", ""] + [f"- {r}：{line}" for r, line in _code_roles(sec["code"])]
         return L
@@ -90,8 +101,8 @@ def _md_body(sec, results):
         for p in sec["paragraphs"]:
             L.append(f"- **{_label(p)}**：{p.get('claim', '')}{_cite_tail(p)}")
             L += [f"  - {t}" for t in p.get("points", [])]
-    if sec.get("items"):
-        L += ["", "**图 / 表**", ""] + [f"- {i['ref']}：{i.get('what', '')}" for i in sec["items"]]
+    if _items(sec):
+        L += ["", "**图 / 表**", ""] + [f"- {_item_line(i, pending)}" for i in _items(sec)]
     if sec.get("code"):
         L += ["", "**相关代码**", ""] + [f"- {role}：{line}" for role, line in _code_roles(sec["code"])]
     if sec.get("boundaries"):
@@ -100,15 +111,30 @@ def _md_body(sec, results):
 
 
 def to_md(o):
+    pending = _pending(o)
     L = [f"# 写作大纲：{o.get('project', '')}", ""]
     for results, secs in ((False, o.get("methods", [])), (True, o.get("results", []))):
         for sec, depth, _ in _walk(secs):
             L += [f"{'#' * (depth + 2)} {sec['id']} {sec['title']}", ""]
             if results and sec.get("subtitle"):
                 L += [f"（{sec['subtitle']}）", ""]
-            body = _md_body(sec, results)
+            body = _md_body(sec, results, pending)
             L += body + ([""] if body else [])
+    rows = o.get("_coverage") or []
+    if rows:
+        L += ["## 图表引用清单", "", "| 资产 | panel | 首次引用 | 引用小节 | 状态 |", "|---|---|---|---|---|"]
+        L += [f"| {a} | {p or '—'} | {f} | {'、'.join(s) or '—'} | {_status_zh(st)} |" for a, p, f, s, st in rows]
+        L.append("")
     return "\n".join(L)
+
+
+def _status_zh(st):
+    return {"cited": "已引用", "pending": "已引用（外部绘制，待交付）", "NOT CITED": "未引用"}.get(
+        st, st.replace("excluded: ", "不进稿件："))
+
+
+def _pending(o):
+    return {outline_check._asset(n, l) for r in o.get("pending", []) for n, l in (outline_check._expand(r) or [])}
 
 
 # ------------------------------------------------------------------------------------------------ docx
@@ -143,6 +169,7 @@ def to_docx(o, path):
                 r._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
         return p
 
+    pending = _pending(o)
     for results, secs in ((False, o.get("methods", [])), (True, o.get("results", []))):
         for sec, depth, _ in _walk(secs):
             h = para(f"{sec['id']} {sec['title']}", bold=True, size=HEAD_PT.get(depth, 10.5))
@@ -160,6 +187,10 @@ def to_docx(o, path):
                     para("为后文铺垫：", level=1)
                     for t in sec["foreshadow"]:
                         para(t, level=2)
+                if _items(sec):
+                    para("引用图 / 表：", level=1)
+                    for i in _items(sec):
+                        para(_item_line(i, pending), level=2)
                 if sec.get("code"):
                     para("关联代码（只作为你脑内映射）：", level=1)
                     for role, line in _code_roles(sec["code"]):
@@ -175,10 +206,10 @@ def to_docx(o, path):
                     q.add_run(p.get("claim", "") + _cite_tail(p))
                     for t in p.get("points", []):
                         para(t, level=2)
-            if sec.get("items"):
+            if _items(sec):
                 para("图 / 表", bold=True)
-                for i in sec["items"]:
-                    para(f"{i['ref']}：{i.get('what', '')}", level=1)
+                for i in _items(sec):
+                    para(_item_line(i, pending), level=1)
             if sec.get("code"):
                 para("相关代码", bold=True)
                 for role, line in _code_roles(sec["code"]):
@@ -187,6 +218,18 @@ def to_docx(o, path):
                 para("措辞边界", bold=True)
                 for t in sec["boundaries"]:
                     para(t, level=1)
+    rows = o.get("_coverage") or []
+    if rows:
+        h = para("图表引用清单", bold=True, size=14)
+        h.paragraph_format.space_before = Pt(10)
+        tab = d.add_table(rows=1, cols=5)
+        tab.style = "Table Grid"
+        for cell, t in zip(tab.rows[0].cells, ("资产", "panel", "首次引用", "引用小节", "状态")):
+            cell.text = t
+            cell.paragraphs[0].runs[0].bold = True
+        for a, p, f, s, st in rows:
+            for cell, t in zip(tab.add_row().cells, (a, p or "—", f, "、".join(s) or "—", _status_zh(st))):
+                cell.text = t
     d.save(str(path))
 
 
@@ -208,12 +251,16 @@ def _caption_text(root, o, name):
 
 
 def _copy_section(root, o, sec, results, dest):
+    """Copy the outputs this section cites (figures, tables, captions) and its analysis-code list. Plotting and
+    table-building scripts are not copied: they draw the figures, they are not part of the method."""
     figs, tabs = _refs(sec, results)
+    pending = _pending(o)
     (dest / "figures").mkdir(parents=True, exist_ok=True)
     (dest / "tables").mkdir(exist_ok=True)
     (dest / "captions").mkdir(exist_ok=True)
-    (dest / "code").mkdir(exist_ok=True)
     for name in figs:
+        if name in pending:
+            continue
         src = outline_check._source_json(root, o["figures_root"], name)
         for f in [src, *(src.with_name(f"{name}.{e}") for e in FIG_EXT)]:
             if f.is_file():
@@ -221,15 +268,16 @@ def _copy_section(root, o, sec, results, dest):
         cap = _caption_text(root, o, name)
         if cap:
             (dest / "captions" / f"{name}.md").write_text(cap, encoding="utf-8")
-        for script in root.glob(f"figures/*/{name}.py"):
-            shutil.copy2(script, dest / "code" / script.name)
     for t in tabs:
         for e in TAB_EXT:
             f = root / o["tables_root"] / f"{t}.{e}"
             if f.is_file():
                 shutil.copy2(f, dest / "tables" / f.name)
-    lines = [f"# {sec['id']} 相关代码", ""]
-    for c in sec.get("code", []):
+    if not sec.get("code"):
+        return
+    (dest / "code").mkdir(exist_ok=True)
+    lines = [f"# {sec['id']} 分析代码（只作为脑内映射）", ""]
+    for c in sec["code"]:
         lines.append(f"- [{c.get('role', '')}] `{_code_line(c)}`")
         p = root / c["path"] if c.get("path") and not c.get("guess") else None
         if p is not None and p.is_file() and p.suffix == ".py":
@@ -245,6 +293,7 @@ def build(outline_path, project, out, figkit_toml=None):
     if issues:
         raise RuntimeError("outline_check reported issues:\n" + "\n".join(issues))
     o = yaml.safe_load(Path(outline_path).read_text(encoding="utf-8"))
+    o["_coverage"] = outline_check.coverage(o, root)
     out.mkdir(parents=True, exist_ok=True)
     md = out / "写作大纲.md"
     md.write_text(to_md(o), encoding="utf-8")
