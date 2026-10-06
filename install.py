@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Install the six medfig-* skills and their dependency skill scipilot-medimg-figure-skill (stdlib only).
+"""Install the seven medfig-* skills and their dependency skill scipilot-medimg-figure-skill (stdlib only).
 
-Copies ONLY medfig-suite, medfig-plan, medfig-render, medfig-orchestrate, medfig-outline, medfig-schematic and
+Copies ONLY medfig-suite, medfig-plan, medfig-render, medfig-orchestrate, medfig-outline, medfig-schematic,
+medfig-illustrator and
 scipilot-medimg-figure-skill (medfig-render calls its scripts/).
 Existing installs are moved to a timestamped backup before being replaced;
 nothing is ever deleted. After copying, every file is SHA-256 verified
@@ -25,7 +26,7 @@ from pathlib import Path
 
 SRC_ROOT = Path(__file__).resolve().parent
 SKILLS = ("medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline", "medfig-schematic",
-          "scipilot-medimg-figure-skill")
+          "medfig-illustrator", "scipilot-medimg-figure-skill")
 STAMP = ".medfig_install.json"
 
 EXCLUDED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".git"}

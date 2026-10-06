@@ -16,6 +16,7 @@ description: Use when drawing one specific figure for a medical research paper t
 | 规格已定，要批量出多张 / 整套、并行执行、台账与终审 | medfig-orchestrate（逐图任务内部用本技能） |
 | 只要一张纯影像网格（影像 + 掩膜 / 热图 / 放大框，没有统计 panel） | scipilot-medimg-figure-skill（见 §9） |
 | 示意图、流程图、架构图 | medfig-schematic（生图模型画） |
+| 按参考图 1:1 复刻成可编辑矢量、要在 Illustrator 里原生画 | medfig-illustrator |
 | 非医学数据图 | 不用本技能 |
 
 没有规格时，不要边画边定：先问清每个 panel 的一句话结论和数据来源，或转 medfig-plan。

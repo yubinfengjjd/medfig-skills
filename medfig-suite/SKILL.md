@@ -1,6 +1,6 @@
 ---
 name: medfig-suite
-description: Use when the user wants a complete set of figures and tables (and the Methods / Results writing outline built from them) for a medical or clinical AI manuscript (整套论文图表, 主图/附图, Figure 1 to N, 结果转成论文图) and it is unclear where to start, or wants to go from analysis results to publication figures that mix medical images with statistical panels (影像 + 统计混排). Also use when choosing between planning a figure set, rendering one planned figure, or batch-producing many figures for a medical paper. Not for a single pure image grid of exported images with masks, contours or heatmaps (scipilot-medimg-figure-skill), not for a schematic or architecture diagram on its own (medfig-schematic), and not for non-medical charts.
+description: Use when the user wants a complete set of figures and tables (and the Methods / Results writing outline built from them) for a medical or clinical AI manuscript (整套论文图表, 主图/附图, Figure 1 to N, 结果转成论文图) and it is unclear where to start, or wants to go from analysis results to publication figures that mix medical images with statistical panels (影像 + 统计混排). Also use when choosing between planning a figure set, rendering one planned figure, or batch-producing many figures for a medical paper. Not for a single pure image grid of exported images with masks, contours or heatmaps (scipilot-medimg-figure-skill), not for a schematic or architecture diagram on its own (medfig-schematic), not for replicating an existing reference figure 1:1 as editable vector artwork in Illustrator (medfig-illustrator), and not for non-medical charts.
 ---
 
 # medfig-suite — 医学论文图表路由
@@ -23,6 +23,7 @@ description: Use when the user wants a complete set of figures and tables (and t
 - 规格与数据或文档口径冲突、已过时 → 回 `medfig-plan` 修规格。
 - 图表已定稿，要 Methods / Results 写作大纲或按小节归档文件 → `medfig-outline`。
 - 研究设计图、模型 / 网络架构图、流程示意图（用 ChatGPT 等生图模型画）→ `medfig-schematic`。
+- 要把参考图 1:1 复刻成可编辑矢量，或在用户已打开的 Illustrator 文档里原生重画 → `medfig-illustrator`。
 
 ## 决策表
 
@@ -35,6 +36,7 @@ description: Use when the user wants a complete set of figures and tables (and t
 | 已出图，只要按清单复审 | medfig-orchestrate 的审查清单 |
 | 图表定稿，要写作大纲 / 分节归档 | medfig-outline |
 | 示意图、研究设计图、网络架构图（生图模型画） | medfig-schematic |
+| 参考图 1:1 复刻成可编辑矢量 / 在 Illustrator 里原生绘制 | medfig-illustrator |
 | 非医学图表；用代码直接画示意图 | 不在本套范围，告诉用户 |
 
 ## 下游需要的输入
@@ -46,6 +48,7 @@ description: Use when the user wants a complete set of figures and tables (and t
 - medfig-render：已确认的规格（逐 panel 结论、数据文件与列、图型）、项目根的 `figkit.toml`、输出名与尺寸。
 - medfig-orchestrate：已确认的整套规格、git 仓库（用于 worktree 并行）、`figkit.toml`、`docs/_process/` 台账位置。
 - medfig-schematic：图的主信息与每行内容、模型代码 / 配置位置（核对结构事实）、色板（`figkit.toml`）、尺寸、参考图（可选）、项目外的工作目录。
+- medfig-illustrator：参考图路径与画布尺寸；用户已在 Illustrator 里打开的文档（技能不会自己新建）；要嵌入的原始影像资产及出处；输出名与工作目录。
 - medfig-outline：定稿的规格、`out/figures` 下的 `source.json`、表格、图注草稿、图脚本；可选的上游分析仓库根目录；大纲输出目录（项目外）。
 
 ## 红线

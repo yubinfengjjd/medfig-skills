@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0 (2026-10-06)
+
+- 新技能 `medfig-illustrator`：把已有的参考图 1:1 复刻成可编辑矢量，并在用户**已经打开**的 Illustrator 文档里原生绘制——不新建、不关窗、不动文档里原有对象。技能只改名字，内容与此前的 `cell-lct` 一致；脚本文件名（`run_cell_lct.ps1` 等）和 `CELL_LCT_*` 标识符保持不变，播放代码零改动。
+  - 全本地重建：先把参考图拆成 scene / text 清单，再用真实 SVG 图元加可编辑 `<text>` 拼出整张图，不用图像描摹、不嵌参考位图。
+  - 画之前跑 `layout_guard.py`：文字重叠、容器溢出、内边距不足全部拦住并给出带 `action` / `before` / `after` 的修复记录。
+  - 画完跑原生复核：按 Illustrator 真实 `visibleBounds` 再查一遍文字与文字、连接线、箭头、图标、边框的碰撞；字体族和字重按语义解析，不接受 Black / Narrow 之类静默替换。
+  - 交付三件套 AI / SVG / PNG 出自同一个单画板文档，`verify_delivery_bundle.ps1` 核对画板数、画布尺寸、活字数量与内容、栅格残留、空白 PNG、SVG 重渲染差异。
+  - 文字永远是字体，不是锚点对象：SVG 导出关闭字体子集化，`svg_live_text.py` 再补 CSS 字体回退并审计，出现 `<font>/<glyph>` 轮廓即阻止交付。
+  - 画布自动放大：摆进画板后最小文字会低于 8 pt 时，先把画板原地放大（只放大不缩小，且只在本任务还没画东西时改），再开始画；想保留原画布用 `-NoArtboardResize`，此时字号检查会如实报失败。
+  - 用户明确要求时可以把原始影像作为资产嵌入（`-AllowRaster`，只接受本地 PNG/JPG/TIF，拒绝 data URI 和 URL）；参考图本身永远不嵌入。
+- `medfig-suite` 分支 B、决策表、下游输入清单和 `references/routing.md` 增加 `medfig-illustrator` 路由；`medfig-plan`、`medfig-render` 各加一条边界说明；`install.py` 一起安装。
+
 ## 0.4.0 (2026-10-06)
 
 - 新技能 `medfig-schematic`：研究设计图、模型 / 网络架构图这类示意图，由生图模型（ChatGPT 网页版等）绘制。本技能写英文提示词，用户贴进生图模型、把出图发回，技能评估后写下一轮提示词，逐轮迭代到用户满意。生成图是草稿，真实影像和终稿在 Illustrator 里完成。
