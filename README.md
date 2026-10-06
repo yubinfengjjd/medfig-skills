@@ -28,6 +28,7 @@
 - Python 依赖：`pip install -r requirements.txt`（版本固定为测试通过的组合）；跑测试另装 `pip install -r requirements-dev.txt`。
 - `scipilot-medimg-figure-skill` 已包含在本仓库，由 `install.py` 一起安装，不需要另外下载。
 - 可选：Arial 字体（期刊默认字体；缺失时 matplotlib 回退到 DejaVu Sans 并给出警告）。
+- `medfig-illustrator` 另需：Windows、Adobe Illustrator CC 2019（23.x）或更新版本并已打开目标文档；它的 PowerShell 脚本按 `CELL_LCT_PYTHON` → `py` 启动器 → PATH 上的 `python.exe` 的顺序找 Python（需含 Pillow 与 fontTools）。PATH 上只有 Microsoft Store 占位程序时，请设置用户级环境变量：`[Environment]::SetEnvironmentVariable("CELL_LCT_PYTHON", "<python.exe 的完整路径>", "User")`。
 
 ## 安装 / 更新 / 卸载
 

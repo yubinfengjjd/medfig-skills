@@ -10,7 +10,8 @@ function Connect-RunningIllustrator {
     # and attaches to the process already verified above instead of requiring
     # a hard-coded yearly COM registration such as Application.30.
     $illustrator = New-Object -ComObject 'Illustrator.Application'
-    # Lowered from 24.0 (2020) to 23.0 (CC 2019) for this machine; untested upstream.
+    # Minimum supported release: CC 2019 (23.x). The live quality gates
+    # (-IncludeIllustrator) are verified on 23.0.2; report problems with other versions.
     if ([version]$illustrator.Version -lt [version]'23.0') {
         [void][Runtime.InteropServices.Marshal]::ReleaseComObject($illustrator)
         throw "Illustrator CC 2019 or newer is required; connected version is $($illustrator.Version)."

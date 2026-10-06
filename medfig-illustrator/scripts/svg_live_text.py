@@ -37,7 +37,9 @@ GENERIC = {"Times New Roman": "serif", "Courier New": "monospace"}
 QUOTED_FAMILY = re.compile(
     r"font-family:\s*'([^',;]+)'(?:\s*,[^;\"}]*)?"
     r"(?:;\s*font-weight:[^;\"}]*;\s*font-style:[^;\"}]*)?")
-ATTR_FAMILY = re.compile(r'font-family="([^",]+)(?:,[^"]*)?"(?:\s+font-weight="[^"]*"\s+font-style="[^"]*")?')
+ATTR_FAMILY = re.compile(r'font-family="([^",]+)(?:,[^"]*)?"')
+ATTR_WEIGHT_STYLE = re.compile(r'\s+font-(?:weight|style)="[^"]*"')
+START_TAG = re.compile(r"<(?:text|tspan)\b[^>]*>")
 GLYPH_NODES = re.compile(r"<(?:font|font-face|glyph|missing-glyph)[\s>/]")
 TEXT_OPEN = re.compile(r"<text\b[^>]*>")
 TEXT_BLOCK = re.compile(r"(<text\b[^>]*>)(.*?)</text>", re.S)
@@ -85,15 +87,25 @@ def fix_text(svg: str) -> tuple[str, int]:
 
     svg = QUOTED_FAMILY.sub(quoted, svg)
 
-    def attribute(match: re.Match) -> str:
+    def tag_with_attribute(match: re.Match) -> str:
+        # Work on the whole start tag so an existing font-weight / font-style
+        # attribute is replaced rather than duplicated (duplicates are invalid XML).
         nonlocal count
+        tag = match.group(0)
+        family_attr = ATTR_FAMILY.search(tag)
+        if family_attr is None:
+            return tag
         count += 1
-        family, weight, style = describe(match.group(1).strip())
+        postscript = family_attr.group(1).strip().strip("'\"").strip()
+        family, weight, style = describe(postscript)
         generic = GENERIC.get(family, "sans-serif")
-        return (f'font-family="{match.group(1)}, \'{family}\', {generic}" '
-                f'font-weight="{weight}" font-style="{style}"')
+        tag = ATTR_WEIGHT_STYLE.sub("", tag)
+        family_attr = ATTR_FAMILY.search(tag)
+        replacement = (f'font-family="\'{postscript}\', \'{family}\', {generic}" '
+                       f'font-weight="{weight}" font-style="{style}"')
+        return tag[:family_attr.start()] + replacement + tag[family_attr.end():]
 
-    svg = ATTR_FAMILY.sub(attribute, svg)
+    svg = START_TAG.sub(tag_with_attribute, svg)
     return svg, count
 
 

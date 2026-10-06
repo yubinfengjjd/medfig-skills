@@ -53,7 +53,7 @@ try {
     ))
     Invoke-QualityStage -Name 'skill_validation' -Executable $python -Arguments (Get-CellLctPythonArguments @(
         '-3', '-X', 'utf8',
-        (Join-Path $env:USERPROFILE '.codex\skills\.system\skill-creator\scripts\quick_validate.py'),
+        (Join-Path $PSScriptRoot 'validate_skill.py'),
         $skillRoot
     ))
     if ($IncludeIllustrator) {
@@ -62,6 +62,9 @@ try {
         )
         Invoke-QualityStage -Name 'canonical_bundle' -Executable 'powershell.exe' -Arguments @(
             '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $skillRoot 'tests\test_canonical_bundle.ps1')
+        )
+        Invoke-QualityStage -Name 'artboard_resize' -Executable 'powershell.exe' -Arguments @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $skillRoot 'tests\test_artboard_resize.ps1')
         )
     }
 }

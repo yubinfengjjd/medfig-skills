@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.1 (2026-10-06)
+
+`medfig-illustrator` 代码审查后的修复：
+
+- 质量门禁不再依赖作者本机文件：`skill_validation` 原本调用 `~/.codex/skills/.system/skill-creator/scripts/quick_validate.py`，别的机器上这一步必然失败。改为技能自带的 `scripts/validate_skill.py`（只用标准库），并且多检查一项：frontmatter 的 `name` 必须等于目录名。
+- `svg_live_text.py fix` 修正属性写法：`font-family="'ArialMT'"` 原本会变成 `'ArialMT', ''Arial MT'', sans-serif`（引号被当成字体名的一部分，回退字体名也错了）。现在先去掉引号再解析，并整体替换已有的 `font-weight` / `font-style` 属性，避免出现重复属性（那是无效 XML）。`style=` 写法的结果不变：对已交付的 SVG 重跑一遍，逐字节相同。
+- Python 解析：`CELL_LCT_PYTHON` 原本只要装了 `py` 启动器就会被忽略，与文档写的顺序不符。现在显式设置的值优先；它不存在或缺少 Pillow / fontTools 时直接报 `PYTHON_OVERRIDE_UNUSABLE`，不再静默换用别的解释器。去掉了写死的 `D:\anaconda\python.exe` 候选路径；README 补充了设置方法。
+- `illustrator_com.ps1`：去掉"for this machine; untested upstream"的注释，写明最低支持版本是 CC 2019（23.x），并说明在线质量门禁是在 23.0.2 上验证的。
+- 新增在线测试 `tests/test_artboard_resize.ps1`，并加入 `run_quality_gates.ps1 -IncludeIllustrator`。它只在自己新建的临时文档里操作，覆盖四种情况：放大时左上角不动、拒绝缩小、拒绝非法尺寸、本任务根组已存在时拒绝调整。
+- `test_canvas_and_text.py` 从 13 个测试增加到 19 个：覆盖属性写法的三种情况，以及 `validate_skill` 的接受和拒绝路径。
+
 ## 0.5.0 (2026-10-06)
 
 - 新技能 `medfig-illustrator`：把已有的参考图 1:1 复刻成可编辑矢量，并在用户**已经打开**的 Illustrator 文档里原生绘制——不新建、不关窗、不动文档里原有对象。技能只改名字，内容与此前的 `cell-lct` 一致；脚本文件名（`run_cell_lct.ps1` 等）和 `CELL_LCT_*` 标识符保持不变，播放代码零改动。

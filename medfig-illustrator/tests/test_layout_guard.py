@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -256,6 +257,9 @@ class LayoutGuardTests(unittest.TestCase):
                 text=True,
                 capture_output=True,
                 check=False,
+                # The interpreter running this test already has Pillow and fontTools;
+                # hand it to the runner unless the caller chose one explicitly.
+                env={**os.environ, "CELL_LCT_PYTHON": os.environ.get("CELL_LCT_PYTHON") or sys.executable},
             )
             self.assertEqual(completed.returncode, 0, completed.stderr)
             cache = json.loads((work_dir / "geometry-cache.json").read_text(encoding="utf-8-sig"))
