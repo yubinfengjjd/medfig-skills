@@ -13,7 +13,14 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 import xml.etree.ElementTree as ET
 
-from layout_guard import Bounds, TextSpec, audit_svg, generic_bounds, measure_text, repair_svg, rotated_bounds, text_metrics
+from layout_guard import (Bounds, TextSpec, audit_svg, font_path, generic_bounds, measure_text, repair_svg,
+                          rotated_bounds, text_metrics)
+
+# layout_guard resolves real font files from C:/Windows/Fonts and falls back to an
+# estimated table elsewhere; Arial Narrow ships with Office, not with mscorefonts, so
+# the narrow-metric case only means something where arialn.ttf is actually resolvable.
+_narrow = font_path("Arial Narrow")
+ARIAL_NARROW_AVAILABLE = _narrow is not None and Path(_narrow).name.lower() == "arialn.ttf"
 
 
 SVG_NS = "http://www.w3.org/2000/svg"
@@ -57,6 +64,7 @@ class LayoutGuardTests(unittest.TestCase):
         self.assertGreaterEqual(bounds.top, 487)
         self.assertLessEqual(bounds.bottom, 517)
 
+    @unittest.skipUnless(ARIAL_NARROW_AVAILABLE, "Arial Narrow (arialn.ttf) is not installed")
     def test_arial_narrow_metrics_support_dense_table_cells(self) -> None:
         width, _ = text_metrics("Eₛ₁·Eₕ₁", "Arial Narrow", 8)
         self.assertLess(width, 26)
