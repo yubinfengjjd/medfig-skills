@@ -212,7 +212,8 @@ def save(fig, name, prov, kind="main", size=None, cfg=None, dpi=600, panels="mar
            "min_font": qa.min_font(fig), "true_minus": qa.true_minus(fig),
            "whitespace": qa.whitespace_audit(fig), "text_only": qa.text_only_panel(fig),
            "colour": qa.colour_audit(fig), "palette": qa.palette_clash(fig, cfg=cfg),
-           "figure_text": qa.figure_text_audit(fig, cfg=cfg), "bar_baseline": qa.bar_baseline_audit(fig)}
+           "figure_text": qa.figure_text_audit(fig, cfg=cfg), "bar_baseline": qa.bar_baseline_audit(fig),
+           "facet": qa.facet_balance(fig) + qa.repeated_legend(fig)}
     prov.set("qa", res)
     bad = {k: v for k, v in res.items() if k != "audit_layout" and v}
     if fails or bad:

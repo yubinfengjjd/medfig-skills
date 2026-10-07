@@ -250,3 +250,14 @@ S2 / S3 检查全部可见 axes：GridSpec、`fig.add_axes`、subfigure 的 axes
 | 名称 | 签名 | 用途 |
 |---|---|---|
 | `contact_sheet` | `(out_pdf, pages)` -> Path | 审阅 PDF：每页 (标题, [png, ...])，标题写在图上方页眉带并用分隔线隔开，图片区域不允许任何文字（`check_image_axes_clean`）；可放修改前 / 后两张 |
+
+## 小多图（S8）
+
+| 名称 | 签名 | 用途 |
+|---|---|---|
+| `layout.small_multiples` | `(fig, n, ncols, cell_in=1.6, legend_rows=0, gs=None, sharex=True, sharey=True, last_row="center")` | 正方形分面格；`ncols` 不超过 `n`；末行不满时默认居中 |
+| `curves.roc_mean_sd` / `curves.pr_mean_sd` | 新增 `legend=True, linestyle="-"` | 小多图里传 `legend=False`，用下面两个函数代替逐格图例；`linestyle` 直接设在均值线上 |
+| `curves.shared_key` | `(fig, axes, entries, ncol=None, pad_in=0.05)` | 整个分面 panel 一份图例，一行居中放在最高的格标题上方；先冻结布局（`fig.set_layout_engine("none")`）再调用 |
+| `curves.value_block` | `(ax, values, colors, loc="lower right", fmt="{:.3f}", prefix="", pad_pt=3, line_pt=7.5)` | 格内同色数值块（AUC / AP，`(mean, sd)` 显示为 mean ± sd） |
+| `qa.facet_balance` | `(fig, tol=0.10)` | 导出闸门：分面行左右留白差 > 10% panel 宽、或独占纵向区段的 panel 在全图里偏向一侧，即 FAIL |
+| `qa.repeated_legend` | `(fig)` | 导出闸门：同一 panel 有 ≥ 2 格画了条目相同的图例即 FAIL |

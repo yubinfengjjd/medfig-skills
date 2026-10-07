@@ -19,7 +19,7 @@
 | 多个估计对同一零线 / 名义水平 | 森林图（计入 ≤ 3 预算） | 多组柱 | 项目少（≤ 3）→ 点 + CI 竖排 | `intervals.forest`；`or_forest.py` |
 | 构成 / 比例 | 100% 堆叠柱（外侧标 n） | 饼图、3D | 只一类非零 → 删除或进表，不做纯文字 panel（S2） | `stacked_fraction.py` |
 | 分类性能（混淆） | 行归一化混淆矩阵小多图（absent 行阴影） | 只报 accuracy | 类别缺失 → absent 标注，不画 0 | `confusion.matrix` |
-| 判别曲线（主图报性能时必有，S7） | ROC（S5：共同 FPR 网格 mean ± SD 带）/ PR 小多图（PR 用于不平衡）；图例 AUC + 95% CI 或 mean ± SD；点估计 / 哑铃图只作补充 panel | 只报 AUC 数字；主图性能只用点估计、曲线放附图 | 无逐样本分数 → 区间点 + 图级 `curve_exempt`；单条曲线 → 不画 SD 带并在图注说明 | `roc_mean_sd.py`；`roc_grid.py`；`pr_mean_sd.py` |
+| 判别曲线（主图报性能时必有，S7） | ROC（S5：共同 FPR 网格 mean ± SD 带；多队列小多图按 S8 一行排、共享图例、格内同色 AUC）/ PR 小多图（PR 用于不平衡）；图例 AUC + 95% CI 或 mean ± SD；点估计 / 哑铃图只作补充 panel | 只报 AUC 数字；主图性能只用点估计、曲线放附图 | 无逐样本分数 → 区间点 + 图级 `curve_exempt`；单条曲线 → 不画 SD 带并在图注说明 | `roc_mean_sd.py`；`roc_grid.py`；`pr_mean_sd.py` |
 | 校准 / 覆盖 | 可靠性图；覆盖–α 曲线；风险–覆盖曲线 | 单点覆盖率柱 | 只一个 α → 点 + CI | `calibration.py`；`risk_coverage.py` |
 | 临床效用（描述性） | DCA 净获益曲线 | 带"获益"措辞的柱 | — | `decision.py` |
 | 有序过程 / 逐步损失 | 阶梯图（step ladder）；瀑布图（先检查闭合） | 无序柱 | 闭合失败 → 停下报错，不画 | `curves.step_ladder` / `heat.waterfall` |

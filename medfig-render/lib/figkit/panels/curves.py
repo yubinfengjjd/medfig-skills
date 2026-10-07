@@ -153,7 +153,8 @@ def _auc(fpr, tpr):
     return float(np.sum(np.diff(fpr) * (tpr[1:] + tpr[:-1]) / 2))
 
 
-def roc_mean_sd(ax, runs, label=None, color=None, n_grid=100, kind="scores", band_alpha=0.2):
+def roc_mean_sd(ax, runs, label=None, color=None, n_grid=100, kind="scores", band_alpha=0.2, legend=True,
+                linestyle="-"):
     """Mean ROC over repeated runs (seeds / folds) with a ±SD band; call once per model on one axes.
 
     ``runs``: list of ``(y_true, y_score)`` (``kind="scores"``, default) or of ``(fpr, tpr)``
@@ -162,7 +163,9 @@ def roc_mean_sd(ax, runs, label=None, color=None, n_grid=100, kind="scores", ban
     Each run's TPR is interpolated onto ``linspace(0, 1, n_grid)`` with ``np.interp`` (tpr[0] = 0,
     last point = 1). The legend shows "label (AUC = mean ± SD)" -- mean and sample SD (ddof = 1) of the
     per-run trapezoidal AUCs; a single run draws no band and shows "label (AUC = 0.xxx)" (say so in
-    the caption). Stores ``ax._anchor_mean_auc``, ``_anchor_sd_auc`` (NaN for one run),
+    the caption). ``legend=False``: no per-axes legend (small multiples: draw ONE key with
+    ``shared_key`` and the per-cell numbers with ``value_block``). ``linestyle`` styles the mean curve
+    (colour + linestyle redundancy, S3). Stores ``ax._anchor_mean_auc``, ``_anchor_sd_auc`` (NaN for one run),
     ``_anchor_fpr_grid``, ``_anchor_mean_tpr``, ``_anchor_sd_tpr`` and ``_anchor_auc`` {label: (mean, sd)}.
     """
     runs = list(runs)
@@ -196,13 +199,14 @@ def roc_mean_sd(ax, runs, label=None, color=None, n_grid=100, kind="scores", ban
     if n > 1:  # coloured data band (not auxiliary)
         ax.fill_between(grid, np.clip(mean_tpr - sd_tpr, 0, 1), np.clip(mean_tpr + sd_tpr, 0, 1),
                         color=color, alpha=band_alpha, linewidth=0, zorder=2)
-    ax.plot(grid, mean_tpr, color=color, linewidth=1.0, label=text, zorder=3)
+    ax.plot(grid, mean_tpr, color=color, linewidth=1.0, linestyle=linestyle, label=text, zorder=3)
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("1 − specificity")
     ax.set_ylabel("Sensitivity")
-    ax.legend(loc="lower right", frameon=False)
+    if legend:
+        ax.legend(loc="lower right", frameon=False)
     ax._figkit_roc_count = k + 1
     ax._anchor_mean_auc = mean_auc
     ax._anchor_sd_auc = sd_auc
@@ -364,7 +368,8 @@ def pr_points(y_true, y_score):
     return np.r_[0.0, rec], np.r_[1.0, prec], ap
 
 
-def pr_mean_sd(ax, runs, label=None, color=None, n_grid=100, band_alpha=0.2, prevalence=True):
+def pr_mean_sd(ax, runs, label=None, color=None, n_grid=100, band_alpha=0.2, prevalence=True, legend=True,
+               linestyle="-"):
     """Mean precision-recall curve over repeated runs with a ±SD band; call once per model.
 
     ``runs``: list of ``(y_true, y_score)``. Each run's interpolated precision
@@ -396,7 +401,8 @@ def pr_mean_sd(ax, runs, label=None, color=None, n_grid=100, band_alpha=0.2, pre
     if n > 1:
         ax.fill_between(grid, np.clip(mean_p - sd_p, 0, 1), np.clip(mean_p + sd_p, 0, 1),
                         color=color, alpha=band_alpha, linewidth=0, zorder=2)
-    ax.plot(grid, mean_p, color=color, linewidth=1.0, label=f"{label} ({txt})" if label else txt, zorder=3)
+    ax.plot(grid, mean_p, color=color, linewidth=1.0, linestyle=linestyle,
+            label=f"{label} ({txt})" if label else txt, zorder=3)
     prev = float(np.mean(prevs))
     if prevalence:
         style.aux(ax.axhline(prev, color=GREY, linestyle=":", linewidth=0.6, zorder=1))
@@ -404,7 +410,8 @@ def pr_mean_sd(ax, runs, label=None, color=None, n_grid=100, band_alpha=0.2, pre
     ax.set_ylim(0, 1.02)
     ax.set_xlabel("Recall")
     ax.set_ylabel("Precision")
-    ax.legend(loc="lower left", frameon=False)
+    if legend:
+        ax.legend(loc="lower left", frameon=False)
     ax._figkit_pr_count = k + 1
     ax.__dict__.setdefault("_anchor_pr", {})[label] = dict(
         mean_ap=mean_ap, sd_ap=sd_ap, recall_grid=grid, mean_prec=mean_p, sd_prec=sd_p, prevalence=prev)
@@ -476,3 +483,61 @@ def roc_inset(ax, curves_, bounds=INSET_BOUNDS, tick_pt=None):
     ins.set_ylabel("Sensitivity", fontsize=tick_pt + 1, labelpad=0)
     ins._anchor_auc = aucs
     return ins
+
+
+# ---------------------------------------------------------------- small multiples: one key, per-cell values
+def shared_key(fig, axes, entries, ncol=None, pad_in=0.05, **kw):
+    """ONE legend for a small-multiple panel whose cells share the same entries (never one per cell).
+
+    ``entries``: list of dicts with ``label`` and ``color`` (+ optional ``linestyle``, ``marker``). The key
+    is one row centred over the union of ``axes``, ``pad_in`` inches above the highest cell title. It is
+    attached to the first cell, so it is exported with the panel; its handles are keys, not data.
+    Returns the Legend (also ``axes[0]._figkit_shared_key``)."""
+    from matplotlib.lines import Line2D
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    boxes = [a.get_position() for a in axes]
+    x0, x1 = min(b.x0 for b in boxes), max(b.x1 for b in boxes)
+    tops = [(a.title.get_window_extent(r).y1 if a.title.get_text() else a.bbox.y1) / fig.bbox.height
+            for a in axes]
+    top = max(tops + [b.y1 for b in boxes]) + pad_in / fig.get_figheight()
+    handles = [Line2D([], [], color=e["color"], linestyle=e.get("linestyle", "-"), marker=e.get("marker"),
+                      linewidth=1.0, markersize=3, label=e["label"]) for e in entries]
+    a0 = axes[0]
+    ax_x, ax_y = a0.transAxes.inverted().transform(fig.transFigure.transform(((x0 + x1) / 2, top)))
+    lg = a0.legend(handles=handles, loc="lower center", bbox_to_anchor=(ax_x, ax_y), ncol=ncol or len(entries),
+                   frameon=False, handlelength=2.0, columnspacing=1.4, borderaxespad=0, **kw)
+    a0._figkit_shared_key = lg
+    return lg
+
+
+def value_block(ax, values, colors, loc="lower right", fmt="{:.3f}", prefix="", pad_pt=3.0, line_pt=7.5,
+                fontsize=6):
+    """Per-cell numbers (e.g. AUC per model) as a coloured text block in one corner: one line per value in
+    the matching data colour, no line handles (the panel's ``shared_key`` explains the colours). ``values``
+    may be floats or (mean, sd) pairs (rendered "mean ± sd"; sd None / NaN -> mean only). Offsets are in
+    points (``pad_pt`` from the corner, ``line_pt`` per line), so the block keeps its spacing at any cell
+    size. Returns the Text artists in ``values`` order."""
+    import matplotlib.transforms as mtransforms
+    if len(values) != len(colors):
+        raise ValueError("value_block needs one colour per value")
+    rows = []
+    for v in values:
+        if isinstance(v, (tuple, list)):
+            m, sd = v
+            ok = sd is not None and np.isfinite(sd)
+            rows.append(prefix + fmt.format(m) + (" ± " + fmt.format(sd) if ok else ""))
+        else:
+            rows.append(prefix + fmt.format(v))
+    right, lower = loc.endswith("right"), loc.startswith("lower")
+    out = []
+    for i, (txt, c) in enumerate(zip(rows, colors)):
+        k = len(rows) - 1 - i if lower else i
+        dx = -pad_pt if right else pad_pt
+        dy = (pad_pt + k * line_pt) if lower else -(pad_pt + k * line_pt)
+        tr = ax.transAxes + mtransforms.ScaledTranslation(dx / 72, dy / 72, ax.figure.dpi_scale_trans)
+        out.append(ax.text(1 if right else 0, 0 if lower else 1, txt, transform=tr,
+                           ha="right" if right else "left", va="bottom" if lower else "top", color=c,
+                           fontsize=fontsize, zorder=5))
+    ax._figkit_value_block = out
+    return out

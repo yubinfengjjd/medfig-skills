@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 (2026-10-08)
+
+小多图编排（S8）：
+
+- `medfig-plan`：新规则 S8。同一 panel 的分面格优先一行；放不下时最后一行居中，不左对齐留空位。各格图例相同时只画一次，逐格数值用同色文字。与相邻分面 panel 按同一组队列 / 类别分面时列对齐。
+- `medfig-render`：`layout.small_multiples` 末行默认居中、`ncols` 不超过格数；`curves.roc_mean_sd` / `pr_mean_sd` 新增 `legend`、`linestyle` 参数；新函数 `curves.shared_key`（整个分面 panel 一份图例）、`curves.value_block`（格内同色数值）。导出新增两道闸门：`qa.facet_balance`（分面行左右留白差 > 10% panel 宽，或独占一段的 panel 偏向一侧）、`qa.repeated_legend`（多格重复同一份图例）。`roc_grid.py` 配方改成一行 + 共享图例。
+
 ## 0.6.0 (2026-10-08)
 
 主图性能曲线与多病例影像矩阵：

@@ -104,6 +104,7 @@ description: Use when the user needs to plan a set of medical research figures o
 - 期刊规格从 `figkit.journals` 取（来源、核对日期、VERIFIED / ESTIMATED）；ESTIMATED 条目投稿前到官网确认，写进规格"待确认"。
 - 图内文字只放结果与读图编码：轴名、刻度、类别名、数值、n、图例，以及"实心 = 在集合内""色带 = seed 最小–最大值"这类读图必需的编码说明。免责声明（illustrative / not a clinical report）、方法口径（unweighted、seed-0 calibration、by construction）、结论句、限制声明、交叉引用（Table 6、Fig. 3）一律进图注，不画在图里，也不加图底注释行（`fig.text`）。
 - 内部代号不进图：终点 / 假设 / 设计 / 规则编号（E1、H3、R2、D4、Wave-1）、数据列名（fluid_irf）一律换成读者能懂的描述名，规格 §2 写"内部代号 → 图内名称"对照表，并把这些代号和丢弃版本的名称写成 `figkit.toml` 的 `[qa] forbidden_patterns`，导出时硬拦；开发史通用词（wave、closure、repair、pre-registered、earlier version 等）由 figkit 默认拦截。图注同样不写内部代号和开发史。只表示出处的运行编号（"(seed 0)"）进图注；多个 seed 并排比较时才在图里出现 Seed 0/1/2。
+- 小多图（S8，`references/panel_rules.md` §6）：分面格优先一行，放不下时最后一行居中；共用图例只画一次，逐格数值写成同色文字；与上下 panel 按同一组队列 / 类别分面时列对齐。规格版式行写明每行格数与对齐关系。
 - 图内数值按统一精度显示（规格 §2 写明，例如 3 位小数或 3 位有效数字），不出现原始浮点输出（+0.001268）。
 
 图型选择查 `references/chart_diversity.md`；字段与版式细则见 `references/panel_rules.md`。
@@ -156,4 +157,6 @@ description: Use when the user needs to plan a set of medical research figures o
 | 影像只放 3–4 个"代表性病例" | 分组 × 每组 ≥ 12 例的分层矩阵，固定 seed 分层随机、含误判 |
 | 显著图原始量级接近数值噪声仍逐图归一化展示 | 不展示，换可信的图，图注说明原因 |
 | 口径冲突自行选一个 | 交用户裁决或指定权威文档，写进口径裁决表 |
+| 5 个分面排成 3 + 2，第二行左对齐 | 一行 5 格，或第二行居中；与相邻分面 panel 列对齐（S8） |
+| 每个小格都画一份同样的模型图例 | 一个共享图例 + 每格同色数值（S8） |
 | 规格还没批准就开始写脚本 | 违反硬门槛，停下 |

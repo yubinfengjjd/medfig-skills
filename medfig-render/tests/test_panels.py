@@ -628,3 +628,59 @@ def test_case_tiles_shared_scale_error_frame_and_no_letterbox():
     with pytest.raises(ValueError):
         imaging.case_tiles(fig, [0, 0, 1, 1], cases, 1.0, 1.0, ncols=3)
     plt.close(fig)
+
+
+def _mark(axes, pid="a"):
+    from figkit import panel
+    panel.mark_panel(axes[0], pid, extra_axes=axes[1:])
+
+
+def test_small_multiples_one_row_and_centred_last_row():
+    from figkit import layout
+    fig = plt.figure(figsize=(7, 3.5), layout="constrained")
+    axes, _ = layout.small_multiples(fig, 5, ncols=3)
+    fig.canvas.draw()
+    x = [round(a.get_position().x0 + a.get_position().width / 2, 3) for a in axes]
+    row1_mid = (x[0] + x[2]) / 2
+    assert abs((x[3] + x[4]) / 2 - row1_mid) < 0.01  # short row centred under the full row
+    plt.close(fig)
+    fig = plt.figure(figsize=(7, 2))
+    axes, _ = layout.small_multiples(fig, 5, ncols=8)  # ncols capped at n: one row
+    assert len({round(a.get_position().y0, 3) for a in axes}) == 1
+    plt.close(fig)
+
+
+def test_facet_balance_flags_left_aligned_short_row():
+    fig = plt.figure(figsize=(6, 4), layout="none")
+    axes = [fig.add_axes([0.08 + j * 0.3, 0.55, 0.25, 0.35]) for j in range(3)]
+    axes += [fig.add_axes([0.08 + j * 0.3, 0.1, 0.25, 0.35]) for j in range(2)]
+    for a in axes:
+        a.plot([0, 1], [0, 1], color="#0072B2")
+    _mark(axes)
+    assert any("row 2/2" in m for m in qa.facet_balance(fig))
+    for j, a in enumerate(axes[3:]):
+        a.set_position([0.23 + j * 0.3, 0.1, 0.25, 0.35])  # centred
+    assert not [m for m in qa.facet_balance(fig) if "row" in m]
+    plt.close(fig)
+
+
+def test_repeated_legend_and_shared_key():
+    rng = np.random.default_rng(0)
+    runs = [(rng.integers(0, 2, 80), rng.uniform(size=80)) for _ in range(2)]
+    fig = plt.figure(figsize=(6, 2.4), layout="none")
+    axes = [fig.add_axes([0.07 + j * 0.32, 0.18, 0.26, 0.6]) for j in range(3)]
+    for a in axes:
+        curves.roc_mean_sd(a, runs, label="Model A", color="#0072B2")
+        curves.roc_mean_sd(a, runs, label="Model B", color="#D55E00", linestyle="--")
+    _mark(axes)
+    assert qa.repeated_legend(fig)
+    for a in axes:
+        a.get_legend().remove()
+        txt = curves.value_block(a, [a._anchor_auc["Model A"], a._anchor_auc["Model B"]], ["#0072B2", "#D55E00"])
+        assert [t.get_color() for t in txt] == ["#0072B2", "#D55E00"] and "±" in txt[0].get_text()
+    assert axes[0].get_lines()[-1].get_linestyle() == "--"
+    lg = curves.shared_key(fig, axes, [dict(label="Model A", color="#0072B2"),
+                                       dict(label="Model B", color="#D55E00", linestyle="--")])
+    assert qa.repeated_legend(fig) == [] and axes[0]._figkit_shared_key is lg
+    assert qa.geometry_audit(fig) == []
+    plt.close(fig)

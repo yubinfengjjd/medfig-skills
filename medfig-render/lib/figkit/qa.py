@@ -594,3 +594,95 @@ def bar_baseline_audit(fig):
                            "(style.axis_break)")
                 break
     return out
+
+
+# ---------------------------------------------------------------- S8 facet layout
+FACET_BALANCE_MAX = 0.10  # max |left - right| blank of a facet row, fraction of the reference width
+
+
+def _facet_rows(items, overlap=0.5):
+    """Group (ax, tight bbox) into rows by vertical overlap of the axes boxes."""
+    rows = []
+    for ax, tb in sorted(items, key=lambda t: -t[0].get_window_extent().y1):
+        b = ax.get_window_extent()
+        for row in rows:
+            y0, y1 = row["y"]
+            if min(y1, b.y1) - max(y0, b.y0) > overlap * min(y1 - y0, b.height):
+                row["items"].append((ax, tb))
+                row["y"] = (min(y0, b.y0), max(y1, b.y1))
+                break
+        else:
+            rows.append(dict(items=[(ax, tb)], y=(b.y0, b.y1)))
+    return rows
+
+
+def facet_balance(fig, tol=FACET_BALANCE_MAX):
+    """S8: (1) every row of a multi-cell panel (small multiples marked as ONE panel) must be centred in the
+    panel's extent -- |left blank - right blank| <= ``tol`` x panel width; a short last row left-aligned
+    under a full row fails. (2) A panel alone in its vertical band must be centred in the figure's content
+    width by the same rule (no block pushed to one side with a blank strip on the other). Colourbars count
+    for the panel extent but are not cells. Only marked panels are audited (``panel.mark_panel``)."""
+    from . import panel as _panel
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    marked = _panel.marked_panels(fig)
+    if not marked:
+        return []
+
+    def tb(a):
+        return a.get_tightbbox(r) if a.get_visible() else None
+
+    allb = [tb(a) for a in fig.axes if tb(a) is not None]
+    fx0, fx1 = min(b.x0 for b in allb), max(b.x1 for b in allb)
+    out, ext = [], {}
+    for p in marked:
+        members = [p] + list(p._figkit_panel_extra)
+        boxed = [(a, tb(a)) for a in members if tb(a) is not None]
+        cells = [(a, b) for a, b in boxed if not _is_colorbar_axes(a)]
+        if not cells:
+            continue
+        px0, px1 = min(b.x0 for _, b in boxed), max(b.x1 for _, b in boxed)
+        ext[p._figkit_panel_id] = (px0, px1, min(a.get_window_extent().y0 for a, _ in boxed),
+                                   max(a.get_window_extent().y1 for a, _ in boxed))
+        rows = _facet_rows(cells)
+        if len(cells) > 1 and len(rows) > 1:
+            for k, row in enumerate(rows):
+                x0 = min(b.x0 for _, b in row["items"])
+                x1 = max(b.x1 for _, b in row["items"])
+                left, right = x0 - px0, px1 - x1
+                if abs(left - right) > tol * (px1 - px0):
+                    out.append(f"facet balance {p._figkit_panel_id}: row {k + 1}/{len(rows)} "
+                               f"({len(row['items'])} cells) left {left / fig.dpi:.2f} in vs right "
+                               f"{right / fig.dpi:.2f} in blank -- centre the short row or use one row")
+    for pid, (x0, x1, y0, y1) in ext.items():
+        if any(q != pid and min(y1, b) - max(y0, a) > 0 for q, (_, _, a, b) in ext.items()):
+            continue
+        left, right = x0 - fx0, fx1 - x1
+        if abs(left - right) > tol * (fx1 - fx0):
+            out.append(f"facet balance {pid}: alone in its band, left {left / fig.dpi:.2f} in vs right "
+                       f"{right / fig.dpi:.2f} in blank -- fill the width or centre the block")
+    return out
+
+
+_LEGEND_NUM = re.compile(r"\(.*?\)|[-+−]?\d[\d.,]*|[±=]")
+
+
+def repeated_legend(fig):
+    """S8: a multi-cell panel where >= 2 cells carry a legend with the same entry names (numbers and
+    parentheses stripped). Draw one ``curves.shared_key`` for the panel and per-cell numbers with
+    ``curves.value_block``. Legends whose entries are numbers only (a per-cell value key) are allowed."""
+    from . import panel as _panel
+    out = []
+    for p in _panel.marked_panels(fig):
+        keys = []
+        for a in [p] + list(p._figkit_panel_extra):
+            lg = a.get_legend()
+            if lg is None or lg is getattr(a, "_figkit_shared_key", None):
+                continue
+            labs = tuple(" ".join(_LEGEND_NUM.sub(" ", t.get_text()).split()) for t in lg.get_texts())
+            if any(labs):
+                keys.append(labs)
+        if len(keys) > 1 and len(set(keys)) == 1:
+            out.append(f"repeated legend {p._figkit_panel_id}: {len(keys)} cells repeat {list(keys[0])} -- "
+                       "use one curves.shared_key + curves.value_block per cell")
+    return out

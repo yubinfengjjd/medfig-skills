@@ -112,6 +112,7 @@ QA 失败时修图，不修检查：
 - 不拉伸：影像 `aspect="equal"`，`imaging.*` 已强制；列宽按宽高比分配。上游已缩放时图注说明显示宽高比不是原始宽高比。
 - 掩膜不缩放：`band_masks` 与原图形状不同直接报错。
 - 低分辨率模型输出画成概率图：`imaging.prob_overlay(..., resample="bilinear")`，`ax._anchor_resampled` 写进 prov 和图注。
+- 小多图（S8）：一行排或末行居中；`legend=False` + `curves.shared_key` + `curves.value_block`；与相邻分面 panel 列对齐。`qa.facet_balance` / `qa.repeated_legend` 在导出时硬拦。配方见 `roc_grid.py`。
 - 多病例展示用分组分层矩阵（`case_matrix.py`：`stats.stratified_cases` 选例 + `imaging.case_tiles`），每组 ≥ 12 例、含错例、共用色阶，`case_selection` 写进 prov 和图注。
 - CAM / 概念图共享色阶：先对所有展示病例算一个 `vmin, vmax`，再逐个 `concept_map`；原值 ≤ 0 透明；原始量级在噪声水平的 CAM 不画。
 - 比例尺只画有文档像素间距的轴。

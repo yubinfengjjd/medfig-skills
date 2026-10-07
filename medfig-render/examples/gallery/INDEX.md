@@ -53,7 +53,7 @@
 | 配方 | 图型 | 什么时候用 | 输入数据形状 | 不要用 | 库函数 | 关键词 | 来源 |
 |---|---|---|---|---|---|---|---|
 | `case_matrix.py` | 分组分层病例矩阵（代表图 + 多病例热图矩阵 + 局部放大） | 按类别 / 队列对照展示模型关注区域，每组 ≥ 12 例，分层随机选例且含错例 | 每例原图 (H, W) + 低分辨率热图 / 概念图 + 真值 / 预测；先用 stratified_cases 选例 | 只有 1–4 个病例（改单病例影像 panel 并在图注说明）；各例热图不能共用一个色阶（量级不可比） | `stats.stratified_cases` + `imaging.case_tiles` + `imaging.crop_window` + `imaging.concept_map` | case matrix, heatmap, CAM, gallery, 病例矩阵, 热图, 选例 | 项目实战提炼（版式参考乳腺 MRI 生境热图 + 病理放大的多病例组图） |
-| `roc_grid.py` | ROC 小多图 | 同一组模型在多个队列上分别比较，每队列一格 | 队列 × 模型 × 重复的逐样本标签 + 分数 | 只有 1–2 个队列（直接并排两个 roc_mean_sd 即可） | `layout.small_multiples` + `curves.roc_mean_sd` | ROC, small multiples, 队列, 小多图 | 项目实战提炼 |
+| `roc_grid.py` | ROC 小多图 | 同一组模型在多个队列上分别比较，每队列一格 | 队列 × 模型 × 重复的逐样本标签 + 分数 | 只有 1–2 个队列（直接并排两个 roc_mean_sd 即可）；每格各画一份同样的图例 | `layout.small_multiples` + `curves.roc_mean_sd` + `curves.shared_key` + `curves.value_block` | ROC, small multiples, 队列, 小多图 | 项目实战提炼 |
 
 已有、未单独做配方的图型（见 `references/figkit_api.md`）：森林图 / 哑铃图 / 配对估计图（`intervals`）、
 小提琴 / 箱线 / ECDF / HDR 轮廓（`dist`）、标注热图 / 瀑布图（`heat`）、混淆矩阵（`confusion`）、
