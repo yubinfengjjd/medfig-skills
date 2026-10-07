@@ -68,7 +68,8 @@ class Reader:
         self._reg(p, len(recs)); return recs
 
     def external(self, path):
-        """Read .csv/.json/.md/.txt from a whitelisted ``external_dirs`` entry only.
+        """Read .csv/.json/.md/.txt/.npz from a whitelisted ``external_dirs`` entry only (npz: rows = number
+        of arrays, ``allow_pickle=False``; e.g. a derived case-gallery export written outside data_root).
 
         Relative paths resolve against the first whitelisted dir."""
         dirs = [Path(d).resolve() for d in self.cfg.external_dirs]
@@ -86,6 +87,8 @@ class Reader:
             rows = len(obj) if isinstance(obj, (list, dict)) else 1
         elif suffix in (".md", ".txt"):
             obj = p.read_text(encoding="utf-8"); rows = len(obj.splitlines())
+        elif suffix == ".npz":
+            obj = np.load(p, allow_pickle=False); rows = len(obj.files)
         else:
             raise ValueError(f"unsupported external file type: {p.suffix}")
         self._reg(p, rows); return obj

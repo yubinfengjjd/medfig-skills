@@ -597,3 +597,34 @@ def test_heat_fmt_hyphen_kept_only_minus_converted():
 def test_shared_aux_constants_in_style():
     assert confusion.ABSENT_FILL == heat.NA_FILL == style.NA_FILL
     assert intervals.GREY == curves.GREY == style.GREY
+
+
+def test_crop_window_aspect_centre_and_bounds():
+    heat = np.zeros((16, 16)); heat[8, 14] = 1.0  # mass at the right edge
+    y0, y1, x0, x1 = imaging.crop_window((200, 600), 1.0, heat)
+    assert (y1 - y0, x1 - x0) == (200, 200) and x1 == 600  # largest square, shifted inside the image
+    y0, y1, x0, x1 = imaging.crop_window((200, 600), 1.0, None, frac=0.5)
+    assert (y1 - y0, x1 - x0) == (100, 100) and abs((x0 + x1) / 2 - 300) <= 1 and abs((y0 + y1) / 2 - 100) <= 1
+    assert imaging.crop_window((200, 600), 1.0, heat) == imaging.crop_window((200, 600), 1.0, heat)
+    with pytest.raises(ValueError):
+        imaging.crop_window((200, 600), 1.0, frac=0)
+
+
+def test_case_tiles_shared_scale_error_frame_and_no_letterbox():
+    rng = np.random.default_rng(0)
+    cases = [dict(raw=rng.uniform(size=(100, 300)), heat=rng.uniform(size=(8, 8)) * (i + 1), error=i == 2, id=i)
+             for i in range(6)]
+    fig = plt.figure(figsize=(3, 2), layout="none")
+    axes = imaging.case_tiles(fig, [0.05, 0.05, 0.9, 0.9], cases, 0.0, 6.0, ncols=3)
+    assert len(axes) == 6
+    assert {ax._anchor_mappable.norm.vmax for ax in axes} == {6.0}
+    assert axes[2].spines["left"].get_visible() and axes[2]._anchor_case["error"]
+    assert not axes[0].spines["left"].get_visible()
+    assert qa.whitespace_audit(fig) == []
+    w = {round(ax.get_position().width, 6) for ax in axes}
+    assert len(w) == 1
+    raw_only = imaging.case_tiles(fig, [0.05, 0.05, 0.9, 0.2], cases[:3], 0.0, 6.0, ncols=3, overlay=False)
+    assert all(not hasattr(ax, "_anchor_mappable") for ax in raw_only)
+    with pytest.raises(ValueError):
+        imaging.case_tiles(fig, [0, 0, 1, 1], cases, 1.0, 1.0, ncols=3)
+    plt.close(fig)

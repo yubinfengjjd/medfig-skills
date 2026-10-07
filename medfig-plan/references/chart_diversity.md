@@ -19,7 +19,7 @@
 | 多个估计对同一零线 / 名义水平 | 森林图（计入 ≤ 3 预算） | 多组柱 | 项目少（≤ 3）→ 点 + CI 竖排 | `intervals.forest`；`or_forest.py` |
 | 构成 / 比例 | 100% 堆叠柱（外侧标 n） | 饼图、3D | 只一类非零 → 删除或进表，不做纯文字 panel（S2） | `stacked_fraction.py` |
 | 分类性能（混淆） | 行归一化混淆矩阵小多图（absent 行阴影） | 只报 accuracy | 类别缺失 → absent 标注，不画 0 | `confusion.matrix` |
-| 判别曲线 | ROC（S5：共同 FPR 网格 mean ± SD 带）/ PR 小多图（PR 用于不平衡） | 只报 AUC 数字 | 无曲线点 → 表格；单条曲线 → 不画 SD 带并在图注说明 | `roc_mean_sd.py`；`roc_grid.py`；`pr_mean_sd.py` |
+| 判别曲线（主图报性能时必有，S7） | ROC（S5：共同 FPR 网格 mean ± SD 带）/ PR 小多图（PR 用于不平衡）；图例 AUC + 95% CI 或 mean ± SD；点估计 / 哑铃图只作补充 panel | 只报 AUC 数字；主图性能只用点估计、曲线放附图 | 无逐样本分数 → 区间点 + 图级 `curve_exempt`；单条曲线 → 不画 SD 带并在图注说明 | `roc_mean_sd.py`；`roc_grid.py`；`pr_mean_sd.py` |
 | 校准 / 覆盖 | 可靠性图；覆盖–α 曲线；风险–覆盖曲线 | 单点覆盖率柱 | 只一个 α → 点 + CI | `calibration.py`；`risk_coverage.py` |
 | 临床效用（描述性） | DCA 净获益曲线 | 带"获益"措辞的柱 | — | `decision.py` |
 | 有序过程 / 逐步损失 | 阶梯图（step ladder）；瀑布图（先检查闭合） | 无序柱 | 闭合失败 → 停下报错，不画 | `curves.step_ladder` / `heat.waterfall` |
@@ -39,7 +39,8 @@
 
 | 结论类型 | 推荐 | 禁用 | 降级路径 |
 |---|---|---|---|
-| 代表性病例外观 | 影像网格，aspect equal，列宽按图像宽高比（S1） | 拉伸到统一框 | 上游已重采样 → 图注注明显示比例 ≠ 原始比例 |
+| 代表性病例外观 / 模型关注（S6） | 分组分层病例矩阵 `case_matrix.py`：按类别或队列分组并排，每组一行代表性原图 + 叠加、一个多病例图矩阵（每组 ≥ 12 例，共用色阶，`imaging.case_tiles`）、一行局部放大（`imaging.crop_window`）；aspect equal，列宽按图像宽高比（S1） | 只放 3–4 例；拉伸到统一框；逐病例各自色阶 | 有空间图的病例 < 每组 12 例 → 停下报给用户（补导出或改分组），不悄悄减少；上游已重采样 → 图注注明显示比例 ≠ 原始比例 |
+| 选例（S6） | 先定规则再看图：按组分层、固定 seed 随机抽，每组含误判病例（`stats.stratified_cases`）；规则、seed、每组 n 与候选池写进 `case_selection`、图注和 source.json | 按置信度 / 观感挑"好看"的病例；只放正确病例 | 候选池只是可用影像子集 → 图注写明；单病例报告页 → `case_selection` 写 exempt 与原因 |
 | 分割 / 边界 | 影像 + 轮廓，标明来源（人工 / 模型预测） | 把预测当标注 | 无人工参照 → 只画预测，标"predicted, no manual reference"，定量比较放统计 panel |
 | 显著性 / 概念图 | 共享色阶（同 panel 共用 vmin/vmax），colorbar 标原始单位 | 逐图 min-max 放大 | 原始量级接近数值噪声 → 不展示，换可信图并在图注写原因 |
 | 仅正激活有意义 | vmin = 0，≤ 0 透明 | 负值被着色 | — |

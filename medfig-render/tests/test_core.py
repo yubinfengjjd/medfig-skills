@@ -174,6 +174,13 @@ def test_external_without_whitelist_refuses(tmp_path):
         io.Reader(Provenance("t"), cfg).external(tmp_path / "x.csv")
 
 
+def test_external_npz(project):
+    np.savez(project.external_dirs[0] / "case.npz", raw=np.zeros((2, 3)), heat=np.ones(4))
+    prov = Provenance("t")
+    z = io.Reader(prov, project).external("case.npz")
+    assert z["raw"].shape == (2, 3) and prov.inputs[0]["rows"] == 2
+
+
 def test_external_unsupported_suffix(project):
     (project.external_dirs[0] / "x.bin").write_bytes(b"\x00")
     with pytest.raises(ValueError, match="unsupported"):

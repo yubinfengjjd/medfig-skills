@@ -58,3 +58,45 @@ def test_data_health_findings(tmp_path):
     text = out.read_text(encoding="utf-8")
     assert "## t.csv" in text and "| y | float64 | 1 |" in text
     assert pd.read_csv(p).shape == (7, 3)  # input untouched
+
+
+def test_spec_check_main_figure_needs_a_curve():
+    perf = _panel("a", c="internal BACC 0.81", ch="dumbbell；x=BACC，y=cohort")
+    out = spec_check.check("### Fig 4 Performance\n" + perf + "\n")
+    assert len(out) == 1 and "S7" in out[0] and "['a']" in out[0]
+    roc = _panel("b", c="model separates classes", d="data/s.npz · probs", ch="ROC mean ± SD；x=1 − specificity")
+    assert spec_check.check("### Fig 4 Performance\n" + perf + "\n" + roc + "\n") == []
+    pr = _panel("b", c="minority class retained", d="data/s.npz · probs", ch="PR 小多图；x=recall")
+    assert spec_check.check("### Fig 4\n" + perf + "\n" + pr + "\n") == []
+    exempt = "### Fig 4\n- curve_exempt：only summary rows, no per-sample scores\n" + perf + "\n"
+    assert spec_check.check(exempt) == []
+    # supplementary figures and non-discrimination curves
+    assert spec_check.check("### S6 Performance\n" + perf + "\n") == []
+    assert spec_check.check("### Fig S6 Performance\n" + perf + "\n") == []
+    tail = _panel("b", c="fewer large errors", d="data/e.csv · err", ch="exceedance curve；log y")
+    assert any("S7" in i for i in spec_check.check("### Fig 4\n" + perf + "\n" + tail + "\n"))
+    # "PR" must be a word: "PRedicted" does not count as a PR curve
+    pred = _panel("b", c="maps align", d="data/m.npz · cam", ch="predicted-class heat；x=w")
+    assert any("S7" in i for i in spec_check.check("### Fig 4\n" + perf + "\n" + pred + "\n"))
+
+
+def _img(sel=None):
+    s = _panel("a", c="maps concentrate in the outer retina", d="gallery/*.npz · cam",
+               ch="病例矩阵 case_matrix.py；每组 3×6")
+    return s + (f"\n  - case_selection：{sel}" if sel is not None else "")
+
+
+def test_spec_check_case_selection_rules():
+    ok = "按类别分层、固定 seed 随机，seed = 20261008；每组 12 例（其中误判 3）；候选池为可用影像子集"
+    assert spec_check.check("### Fig 7\n" + _img(ok) + "\n") == []
+    assert spec_check.check("### Fig 7\n" + _img("stratified random, seed=7, 12 cases per group incl. "
+                                                 "3 misclassified") + "\n") == []
+    assert spec_check.check("### Fig 7\n" + _img("single illustrative case; exempt: case report page") + "\n") == []
+    out = spec_check.check("### Fig 7\n" + _img() + "\n")
+    assert len(out) == 1 and "without case_selection" in out[0]
+    out = spec_check.check("### Fig 7\n" + _img("每组 4 例，代表性病例") + "\n")
+    assert any("seed" in i for i in out) and any("misclassified" in i for i in out)
+    assert any(">= 12 cases per group" in i and "[4]" in i for i in out)
+    # supplementary imaging panels follow the same rule; non-imaging panels are untouched
+    assert spec_check.check("### S12\n" + _img() + "\n")
+    assert spec_check.check("### Fig 2\n" + _panel("a") + "\n") == []

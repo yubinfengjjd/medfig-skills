@@ -151,3 +151,88 @@ def prob_overlay(ax, raw, prob, vmin, vmax, cmap="viridis", resample="bilinear",
     ax._anchor_upsampled = up
     ax._anchor_resampled = (p.shape, (H, W), "none" if same else resample)
     return ax
+
+
+def crop_window(shape, aspect, heat=None, frac=1.0):
+    """Deterministic crop ``(y0, y1, x0, x1)`` of an ``(H, W)`` image with width / height = ``aspect``.
+
+    The window is the largest one of that aspect that fits, scaled by ``frac`` (0 < frac <= 1; < 1 =
+    zoom), centred on the centroid of the positive part of ``heat`` (any resolution; upsampled to
+    ``shape``) or on the image centre when ``heat`` is None / has no positive mass, then shifted to stay
+    inside the image. Same inputs -> same window, so the crop is reproducible and can go in provenance."""
+    H, W = (int(s) for s in shape[:2])
+    if aspect <= 0 or not 0 < frac <= 1:
+        raise ValueError(f"crop_window needs aspect > 0 and 0 < frac <= 1, got {aspect!r}, {frac!r}")
+    h = min(H, W / aspect) * frac
+    w = h * aspect
+    h, w = max(1, int(round(h))), max(1, int(round(w)))
+    cy, cx = (H - 1) / 2, (W - 1) / 2
+    if heat is not None:
+        m = np.clip(upsample(heat, (H, W)), 0, None)
+        if m.sum() > 0:
+            ys, xs = np.indices((H, W))
+            cy, cx = float((ys * m).sum() / m.sum()), float((xs * m).sum() / m.sum())
+    y0 = int(np.clip(round(cy - h / 2), 0, H - h))
+    x0 = int(np.clip(round(cx - w / 2), 0, W - w))
+    return y0, y0 + h, x0, x0 + w
+
+
+def case_tiles(fig, rect, cases, vmin, vmax, ncols, tile_aspect=1.0, gap=0.04, cmap="magma",
+               error_color="#D55E00", threshold=MAP_THRESHOLD, alpha=MAP_ALPHA, overlay=True, crop_frac=1.0):
+    """Multi-case map matrix for one group: ``ncols`` tiles per row inside ``rect`` (figure fraction
+    ``[x0, y0, w, h]``), every map on the SAME ``[vmin, vmax]`` (compute it once over all groups).
+
+    ``cases``: list of dicts with ``raw`` (H, W), ``heat`` (any resolution; the map, upsampled like
+    ``concept_map``) and optional ``error`` (bool: misclassified -> 1.2 pt ``error_color`` frame) and
+    ``id``. Each tile is a ``crop_window(raw.shape, tile_aspect, heat, crop_frac)`` crop of the image and
+    of the upsampled map, so all tiles have one aspect and fill their cells without letterboxing (S1).
+    ``overlay=False`` draws the raw crop only (zoomed-texture row). Tiles are added with ``fig.add_axes``
+    at exact positions: the rect's aspect decides the tile size, the grid is centred horizontally.
+    Returns the list of axes; each has ``_anchor_case`` = {id, error, crop, resampled}. Mark the group
+    as ONE panel: ``panel.mark_panel(axes[0], "b", extra_axes=axes[1:])``."""
+    if not cases:
+        raise ValueError("case_tiles needs at least one case")
+    if vmin is None or vmax is None or not np.isfinite([vmin, vmax]).all() or vmax <= vmin:
+        raise ValueError(f"case_tiles needs a finite shared scale with vmax > vmin, got {vmin!r}, {vmax!r}")
+    nrows = -(-len(cases) // ncols)
+    x0, y0, rw, rh = rect
+    fw, fh = fig.get_size_inches()
+    # tile width in inches from the rect width; shrink if the rows do not fit the rect height
+    tw = rw * fw / (ncols + gap * (ncols - 1))
+    th = tw / tile_aspect
+    if nrows * th + gap * tw * (nrows - 1) > rh * fh:
+        th = rh * fh / (nrows + gap * tile_aspect * (nrows - 1))
+        tw = th * tile_aspect
+    g = gap * tw
+    left = x0 * fw + (rw * fw - (ncols * tw + (ncols - 1) * g)) / 2
+    top = (y0 + rh) * fh
+    axes = []
+    for i, c in enumerate(cases):
+        r, k = divmod(i, ncols)
+        ax = fig.add_axes([(left + k * (tw + g)) / fw, (top - (r + 1) * th - r * g) / fh, tw / fw, th / fh])
+        raw = np.asarray(c["raw"])
+        H, W = raw.shape[:2]
+        win = crop_window((H, W), tile_aspect, c.get("heat"), crop_frac)
+        ya, yb, xa, xb = win
+        raw_image(ax, raw[ya:yb, xa:xb])
+        resampled = None
+        if overlay:
+            if c.get("heat") is None:
+                raise ValueError(f"case {c.get('id', i)}: overlay=True needs 'heat'")
+            src = np.asarray(c["heat"]).shape
+            up = upsample(c["heat"], (H, W))[ya:yb, xa:xb]
+            norm = Normalize(vmin, vmax, clip=True)
+            n = np.ma.filled(norm(up), 0.0)
+            a = np.where((n >= threshold) & (up > 0), alpha, 0.0)
+            ax._anchor_mappable = ax.imshow(up, cmap=cmap, norm=norm, alpha=a, aspect="equal",
+                                            interpolation="nearest")
+            resampled = (tuple(src), (H, W), "bilinear" if tuple(src) != (H, W) else "none")
+        if c.get("error"):
+            for s in ax.spines.values():
+                s.set_visible(True)
+                s.set_edgecolor(error_color)
+                s.set_linewidth(1.2)
+        ax._anchor_case = dict(id=c.get("id", i), error=bool(c.get("error")), crop=list(win),
+                               resampled=resampled)
+        axes.append(ax)
+    return axes

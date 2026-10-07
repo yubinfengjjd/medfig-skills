@@ -351,6 +351,58 @@ def _panel_ids(src):
     return ids
 
 
+def _cited_figures(o, root):
+    """{figure name: source.json path} for every figure cited anywhere in Methods or Results."""
+    out = {}
+    for sec in list(_nodes(o.get("methods", []))) + list(_nodes(o.get("results", []))):
+        refs = [i["ref"] if isinstance(i, dict) else i for i in sec.get("items", [])] + list(sec.get("cites", []))
+        for p in sec.get("paragraphs", []):
+            refs += p.get("cites", [])
+        for name, _ in (n for r in refs for n in (_expand(r) or [])):
+            if name != "table" and name not in out:
+                src = _source_json(root, o["figures_root"], name)
+                if src is not None:
+                    out[name] = src
+    return out
+
+
+def _case_selections(o, root):
+    """{figure: values.case_selection} for cited figures whose source.json records a case selection."""
+    out = {}
+    for name, src in _cited_figures(o, root).items():
+        sel = json.loads(src.read_text(encoding="utf-8")).get("values", {}).get("case_selection")
+        if isinstance(sel, dict):
+            out[name] = sel
+    return out
+
+
+def _case_numbers(sel):
+    """Design constants of a case selection (seed, per-group counts) -- allowed in Methods focus."""
+    nums = {str(sel.get("seed"))} if sel.get("seed") is not None else set()
+    for g in (sel.get("per_group") or {}).values():
+        if isinstance(g, dict):
+            vals = [int(v) for v in g.values() if isinstance(v, (int, float))]
+            nums |= {str(v) for v in vals} | ({str(sum(vals))} if vals else set())
+    return nums
+
+
+RANDOM = re.compile(r"随机|random", re.I)
+
+
+def _case_selection_stated(o, sels):
+    """Every figure with a recorded case selection needs its rule in Methods: the seed and 'random'."""
+    texts = [t for sec in _nodes(o.get("methods", [])) for w, t in _texts(sec, False) if w.endswith("focus")]
+    out = []
+    for name, sel in sels.items():
+        seed = sel.get("seed")
+        ok = any(RANDOM.search(t) and (seed is None or re.search(rf"(?<!\d){seed}(?!\d)", t)) for t in texts)
+        if not ok:
+            out.append(f"case selection rule for {_pretty(name)} not stated in Methods (seed {seed}): write the "
+                       "stratified random rule, seed, cases per group incl. misclassified and the pool in a "
+                       "Methods focus point")
+    return out
+
+
 def _get(obj, path):
     for part in re.findall(r"[^.\[\]]+|\[\d+\]", path):
         if part.startswith("["):
@@ -475,9 +527,13 @@ def check(outline_path, project, figkit_toml=None):
     for f in o.get("main_figures", []):
         if f not in covered and f not in design:
             out.append(f"main figure {f} not covered by any Results section")
+    # ---- case selection of imaging-case figures stated once in Methods (medfig-plan S6)
+    sels = _case_selections(o, root)
+    out += _case_selection_stated(o, sels)
+    case_nums = set().union(*(_case_numbers(s) for s in sels.values())) if sels else set()
     # ---- Methods without result numbers
     for sec in _nodes(o.get("methods", [])):
-        allow = set(sec.get("allow_numbers", [])) | set(o.get("allow_numbers", []))
+        allow = set(sec.get("allow_numbers", [])) | set(o.get("allow_numbers", [])) | case_nums
         for where, text in _texts(sec, False):
             if not where.endswith("focus"):
                 continue

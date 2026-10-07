@@ -91,6 +91,9 @@ description: Use when the user needs to plan a set of medical research figures o
 - x 有序（时间、剂量、阶段、k）才连线；类别 x 不连线。n 很小（如 n ≤ 5 个 seed / 受试者）画点不画柱；零值不画柱，改点图或删除该信息，不做纯文字 panel（A3, S2）。
 - 数据撑不起原图型就降级：只有汇总行就画区间 / 点，不重建逐样本分布；取值离散就用分组柱不用 ECDF；只有一个交集就不用 UpSet（A3）。降级写进规格的"偏离"列（E8）。
 - 影像 panel：先查原始量级和像素间距再选图（A6）；具体渲染规则交给 scipilot-medimg 与 medfig-render（见 `references/chart_diversity.md` 影像节）。
+- **主图性能必须有曲线（硬规则，S7）**：主图里报判别性能（AUC、BACC、accuracy、sensitivity / specificity、recall、F1）且有逐样本分数时，这张图至少有一个曲线 panel：ROC，类别不平衡时再加 PR；图例写 "AUC = x (95% CI a–b)"，多 seed 写 mean ± SD。点估计 / 哑铃图可以作为补充 panel 保留，不能代替曲线。没有逐样本分数时降级为区间点，并在图标题行下写 `curve_exempt：<原因>`。
+- **代表性病例影像要密、分组、分层（S6）**：按类别或队列分组并排；每组一行代表性原图 + 叠加，一个多病例图矩阵（每组 ≥ 12 例，全部病例共用一个色阶），一行局部放大。配方 `case_matrix.py`（`imaging.case_tiles` / `imaging.crop_window`）。只放 3–4 例的"代表性病例"会被读成挑图。
+- **选例规则先定、写进图注和 source.json（S6）**：在看图像和模型输出之前，按组分层、用固定 seed 随机抽取，每组必须含误判病例；不按置信度或观感挑选。panel 写 `case_selection：` 字段（规则、seed、每组 n 及其中误判数、候选池）。候选池只是可用影像的子集时，图注写明。单病例报告页写 `case_selection：single illustrative case; exempt: <原因>`。选例用 `stats.stratified_cases`，记录写进 `values.case_selection`。
 - 不可估计 / 未收集的结果不出图，进附表标 NOT_COLLECTED / not estimable（A5, A7）。
 - 逐样本优先（默认偏好，不是硬规则）：有逐样本数据、结论又是关于样本的，主 panel 优先用逐样本图型（分布、ECDF、超越曲线、配对散点），汇总量做旁注或最小 panel；只用点 + CI 时在 reason 里写为什么。配对 / 机制散点先跑 `stats.structure_strength`，不过就换图型（差值分布、表格行），不改结果。
 - 反模式（规划时排除）：逐样本数据存在却只画汇总（AP-15）；"什么都没发生"的对照 panel 占满一格，应压成窄条或并入相邻 panel（AP-19）；不承载结论的装饰结构，如无重叠点云上的等高线、无意义的分位带（AP-20）（参考 taoge946/academic-figure-patterns）。
@@ -129,8 +132,9 @@ description: Use when the user needs to plan a set of medical research figures o
 5a. 数据与冗余自检：运行 `python medfig-plan/scripts/data_health.py <数据文件...>` 生成数据体检单（缺失、重复行、每组 n、常数列），把发现写进规格 §1；规格写完后运行 `python medfig-plan/scripts/spec_check.py <规格.md>`：同一图内两个 panel 的 claim 相同、同一份 data 画两种 chart、缺字段（含 counterfactual）都会报出来，逐条处理或在 reason 里说明。
 5b. 图内文字扫描：每个 panel 的 chart 字段里写的图内文字（标题、轴名、图例、注释）只含结果与读图编码；没有免责声明、口径、结论句、交叉引用和内部代号；代号对照表覆盖规格里出现的每个代号。
 5c. 版本扫描：没有任何 panel、表或图注用到 §0 版本清单里的丢弃项；没有按内部计划编号组织的行（`references/mainline_rules.md`）。
+5d. 曲线与选例扫描：每张报判别性能的主图有 ROC / PR 曲线 panel，否则写了 `curve_exempt`；每个病例影像 panel 有 `case_selection`（seed、每组 ≥ 12 例、含误判、候选池），单病例页写明 exempt。`spec_check.py` 会报这两类缺项。
 6. 偏离清单：所有降级、合并、删除、示意图外部绘制都列出（E8）。
-7. 样式扫描（S1–S5，见 `references/panel_rules.md` §6）：影像列 width_ratios 按图像宽高比、左右留白 ≤ 15%；无纯文字 panel；每 panel 数据图元有 Okabe-Ito 色且方法色不撞队列色；每 panel 写明 panel_file（单独 PDF（必需）+ SVG，无 a/b/c）；ROC 为共同 FPR 网格 mean ± SD 样式。
+7. 样式扫描（S1–S7，见 `references/panel_rules.md` §6）：影像列 width_ratios 按图像宽高比、左右留白 ≤ 15%；无纯文字 panel；每 panel 数据图元有 Okabe-Ito 色且方法色不撞队列色；每 panel 写明 panel_file（单独 PDF（必需）+ SVG，无 a/b/c）；ROC 为共同 FPR 网格 mean ± SD 样式；S6 病例矩阵与选例、S7 主图曲线。
 
 然后把规格路径交给用户，列出"待确认"项，等待明确批准。用户提出修改就改规格、重新自检、再次请审，直到批准。
 
@@ -148,6 +152,8 @@ description: Use when the user needs to plan a set of medical research figures o
 | 到处是森林图 | 全套 ≤ 3 处，其余按 chart_diversity 选 |
 | n = 3 画柱 + 误差棒 | 画点，标 n |
 | 汇总表硬画小提琴 / ridgeline | 降级为区间点，并写进偏离 |
+| 主图性能只有点估计 / 哑铃图，ROC 放在附图 | 主图加 ROC（不平衡加 PR）曲线 panel；点估计留作补充 |
+| 影像只放 3–4 个"代表性病例" | 分组 × 每组 ≥ 12 例的分层矩阵，固定 seed 分层随机、含误判 |
 | 显著图原始量级接近数值噪声仍逐图归一化展示 | 不展示，换可信的图，图注说明原因 |
 | 口径冲突自行选一个 | 交用户裁决或指定权威文档，写进口径裁决表 |
 | 规格还没批准就开始写脚本 | 违反硬门槛，停下 |

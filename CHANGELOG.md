@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 (2026-10-08)
+
+主图性能曲线与多病例影像矩阵：
+
+- `medfig-plan`：新增两条硬规则。S7：主图报告判别性能且有逐样本分数时，必须至少有一个曲线 panel（ROC；类别不平衡时加 PR），图例写 AUC；没有逐样本分数时在规格里写 `curve_exempt` 和理由。S6：展示病例的影像 panel 按类别 / 队列分组并排，每组一行代表图 + 叠加、一个每组 ≥ 12 例的共享色阶热图矩阵、一行局部放大；病例按组内对 / 错分层、固定 seed 随机抽取，必须含错例，不按置信度或外观挑选（`case_selection` 字段，单例示意图写 `exempt:` 理由）。`spec_check.py` 检查这两条。
+- `medfig-render`：新配方 `case_matrix.py`（分组分层病例矩阵）；新函数 `stats.stratified_cases`（分层随机选例，返回写进 provenance 的 `case_selection` 记录；某层不够数直接报错）、`imaging.crop_window`（以热图质心为中心的确定性裁剪窗）、`imaging.case_tiles`（同宽高比小图精确排布、共用色阶、错例色框，不留 letterbox）；`Reader.external` 支持 `.npz`。
+- `medfig-outline`：图的 `source.json` 里有 `case_selection` 时，`outline_check.py` 要求 Methods 写出选例规则与 seed；写法说明补充曲线 panel 与病例矩阵的结果句要点。
+
 ## 0.5.1 (2026-10-06)
 
 `medfig-illustrator` 代码审查后的修复：

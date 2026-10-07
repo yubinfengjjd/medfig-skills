@@ -398,3 +398,32 @@ def test_figure_without_panel_list_is_flagged(proj, tmp_path):
     o["results"][1]["paragraphs"][0]["cites"] = ["Fig3", "T1"]
     o["results"][1]["items"] = [{"ref": "Fig3", "what": "三类召回都高"}]
     assert any("Fig 3 has no panel list" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+def _with_case_selection(proj, seed=20261008):
+    src = proj / "out/figures/main/fig3.source.json"
+    d = json.loads(src.read_text(encoding="utf-8"))
+    d["values"]["case_selection"] = {"seed": seed, "rule": "stratified random", "strata": ["truth", "correct"],
+                                     "per_group": {"Normal": {"correct": 9, "misclassified": 3}},
+                                     "pool": "available subset", "pool_counts": {"Normal|correct": 31}}
+    src.write_text(json.dumps(d), encoding="utf-8")
+
+
+def test_case_selection_must_be_stated_in_methods(proj, tmp_path):
+    _with_case_selection(proj)
+    out = outline_check.check(_write(tmp_path, _outline()), proj)
+    assert any("case selection rule for Fig 3 not stated in Methods (seed 20261008)" in i for i in out)
+    o = _outline()
+    o["methods"][0]["focus"].append({"topic": "病例展示的选例", "points": [
+        "按真实类别分层、固定 seed 20261008 随机抽取，每组 12 例（误判 3 例、正确 9 例），不按置信度挑选"]})
+    assert outline_check.check(_write(tmp_path, o), proj) == []  # seed and per-group counts are design constants
+    o["methods"][0]["focus"][-1]["points"] = ["按类别分层抽取病例，seed 20261008"]  # seed but no "random"
+    assert any("case selection rule for Fig 3" in i for i in outline_check.check(_write(tmp_path, o), proj))
+
+
+def test_case_selection_only_for_cited_figures(proj, tmp_path):
+    _with_case_selection(proj)
+    o = _outline(main_figures=["fig2"])
+    o["results"] = o["results"][:1]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert not any("case selection" in i for i in out)

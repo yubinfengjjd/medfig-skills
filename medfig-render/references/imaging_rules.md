@@ -34,5 +34,12 @@
 - 不做超分、锐化、局部对比度增强；不用插值应付分辨率检查。
 - 导出前确认没有患者信息残留（烧录文字、ID、日期）。
 
-## 7. 纯影像网格交给 scipilot-medimg
+## 7. 多病例分层矩阵（S6）
+- 展示"模型看哪里"的影像 panel 不放 3–4 个挑出来的病例：按类别 / 队列分组并排，每组一行代表图 + 叠加、一个 ≥ 12 例的热图矩阵（全部共用一个色阶）、一行局部放大。配方 `examples/gallery/case_matrix.py`。
+- 选例用 `stats.stratified_cases`：每组在对 / 错两层内固定 seed 随机抽，必须含错例；不按置信度、不看图挑。某层不够数就报错，回规划阶段改每组例数或分组，不悄悄缩小矩阵。
+- `prov.set("case_selection", record)`；图注写选例规则、seed、每组对 / 错例数、病例池（例如"可用原图子集"）与错例框的含义。
+- 小图用 `imaging.case_tiles`：同宽高比的确定性裁剪（`crop_window`，中心为热图质心），每格窗口写进 provenance；图注说明小图是裁剪视野。figure 用 `layout="none"`，位置由函数精确计算。
+- 代表图从已抽中的病例里取（例如每组第一个正确病例），不另外挑。
+
+## 8. 纯影像网格交给 scipilot-medimg
 只有影像 + 掩膜/热图/放大框、没有统计 panel 的图，用 `scipilot-medimg-figure-skill` 的 JSON 规格渲染（`python scripts/image_panel.py spec.json`），它自带掩膜配准、比例尺、provenance 与图注草稿。影像与统计混排才用 figkit。

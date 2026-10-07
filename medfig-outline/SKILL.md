@@ -40,6 +40,7 @@ description: Use when a medical research figure set is finished and the user wan
 - Methods：`focus`（写作重点，按主题分块、每块若干要点；**不写结果数字**，样本量写量级或结构）、`foreshadow`（可选，为后文埋的伏笔）、`items`（可选，引用的设计资产 + 一句它交代了什么）、`code`（分析代码，"只作为你脑内映射"）。
 - Results：`paragraphs`（第一段 / 第二段 / 第三段，**≤ 3 段**；每段 = 一句结论 + 出处 + ≤ 3 条要点）、`items`（图 / 表：本节首次引用的每个图 / 表一行，写它**在科学上说明什么**，不写怎么画的）、`code`（分析代码）、`boundaries`（措辞边界，≤ 3 条）。
 - **写法**：要点是给作者的提示（"点出…""对比…""一句话带过…"），不是待抄的结果句；每条 ≤ 70 字、≤ 2 个结果数字，每段 ≤ 4 个数，其余写"见 Table X"。不以"引用 Fig …"开头，同一开头不反复。细则和改写示例见 `references/outline_format.md` §5，检查脚本按这些限值报错。
+- **曲线与病例矩阵**：引用 ROC / PR 曲线 panel 的段落点出 AUC（95% CI 或 mean ± SD）和比较对象；引用病例矩阵的段落点出其中含误判病例。有病例矩阵的图（`values.case_selection`），选例规则（分层、固定 seed 随机、每组例数含误判、候选池）在 Methods 评估 / 统计小节写一条要点，检查脚本会核对 seed 和"随机"。
 - Results 的数值写约数 / 区间（"QWK 约 0.64–0.66"），每个数在 `numbers` 里登记出处（`source.json` 的键路径或表格的行列）；Methods 末节（统计）用标准写法交代一次研究的探索性质，其余地方不写。
 - 内部代号：正文用描述名，第一次出现可括注代号便于对照原始材料（例如"三分类（内部代号 E2）"）；丢弃版本的名称和开发史词一律不出现。
 - 代码：只列产生结果的分析代码（训练、评估、统计），按 `source.json` 的数据文件名匹配上游仓库，标"（推测）"，找不到写 `TODO`。**绘图脚本和表格脚本不列、不拷**：它们只是把结果画出来，不属于方法；大纲引用输出的图 / 表，并说明它的科学意义。
@@ -56,6 +57,7 @@ python medfig-outline/scripts/outline_check.py outline.yaml --project <项目根
 - 引用的每个 Fig panel / Table 真实存在；每个主图至少被一个 Results 节覆盖。
 - Methods 的 `focus` 不含结果数字（年份、维度、样本量量级之类用 `allow_numbers` 放行）。
 - 引用次序：四个编号序列都按首次引用连续编号，panel 从 a 开始；每个导出的图、panel、表都被引用或列进 `excluded`；Methods 只引用 `design_assets`。次序不对时报出改号建议。
+- 有病例矩阵的被引用图：Methods focus 里写了选例规则（含该图 `values.case_selection.seed` 与"随机 / random"）。
 - 每个被引用的资产都有一行"图 / 表"说明科学意义；`code` 里没有绘图 / 表格脚本。
 - **全覆盖**：正文和补充材料的每张 Fig、每个 panel、每张 Table 都在大纲里被引用。检查脚本最后打印 `coverage: N/N manuscript assets cited`，不是全数就不交付。外部绘制的图（`pending`）也要被引用；导出时没记录 panel 清单的图会报错，因为无法核对 panel 覆盖。
 - 禁用词（`qa.banned_in_text`）、开发史（`qa.dev_history_in_text`）、项目代号（`[qa] forbidden_patterns`，括注"内部代号"的位置除外）。

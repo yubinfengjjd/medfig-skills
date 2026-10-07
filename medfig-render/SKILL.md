@@ -34,7 +34,7 @@ description: Use when drawing one specific figure for a medical research paper t
 
 完整 API 见 `references/figkit_api.md`。
 
-**先查配方库**：`examples/gallery/INDEX.md` 按类别列出可直接运行的 panel 配方（ROC 均值 ± SD、ROC 小多图、PR、校准、DCA、风险–覆盖、错误捕获 + ROC 插图、OR 森林、记分卡、斜率图、闸门气泡、组级散点、堆叠比例、多指标对比柱、有序消融柱、面积趋势、超越曲线、配对散点、Bland–Altman），每行写明输入数据形状和"不要用"的情况。先按数据形状和"不要用"排除，再选配方；能对上时照抄配方的调用和色板，不要重写绘图代码。
+**先查配方库**：`examples/gallery/INDEX.md` 按类别列出可直接运行的 panel 配方（ROC 均值 ± SD、ROC 小多图、PR、校准、DCA、风险–覆盖、错误捕获 + ROC 插图、OR 森林、记分卡、斜率图、闸门气泡、组级散点、堆叠比例、多指标对比柱、有序消融柱、面积趋势、超越曲线、配对散点、Bland–Altman、分组分层病例矩阵），每行写明输入数据形状和"不要用"的情况。先按数据形状和"不要用"排除，再选配方；能对上时照抄配方的调用和色板，不要重写绘图代码。
 
 **主题**：`figkit.toml` 写 `theme = "soft"` 换成 figures4papers 风格（参考 senlanke/figures4papers，代码重写）：本文方法用唯一饱和色 `style.SOFT_EMPHASIS`，对照方法用浅色（`style.soft_controls`，pastel 或同色相渐变，用 `style.mark_controls` 声明成一组）；柱子平涂、无描边无纹理、柱顶标数值、细深灰误差棒；值轴可以截断，但必须画 `style.axis_break`（`qa.bar_baseline_audit` 会拦）；3 个 seed 不叠点，须线含义写图注；字号 7 / 6.5 pt。默认主题不变，柱子从 0 起。有序类别才用单色相梯度（`style.ordinal_gradient`）；期刊尺寸从 `figkit.journals` 取，ESTIMATED 条目投稿前确认。审阅 PDF 用 `figkit.review.contact_sheet`（文件名在页眉带，不压在图上）。
 
@@ -112,6 +112,7 @@ QA 失败时修图，不修检查：
 - 不拉伸：影像 `aspect="equal"`，`imaging.*` 已强制；列宽按宽高比分配。上游已缩放时图注说明显示宽高比不是原始宽高比。
 - 掩膜不缩放：`band_masks` 与原图形状不同直接报错。
 - 低分辨率模型输出画成概率图：`imaging.prob_overlay(..., resample="bilinear")`，`ax._anchor_resampled` 写进 prov 和图注。
+- 多病例展示用分组分层矩阵（`case_matrix.py`：`stats.stratified_cases` 选例 + `imaging.case_tiles`），每组 ≥ 12 例、含错例、共用色阶，`case_selection` 写进 prov 和图注。
 - CAM / 概念图共享色阶：先对所有展示病例算一个 `vmin, vmax`，再逐个 `concept_map`；原值 ≤ 0 透明；原始量级在噪声水平的 CAM 不画。
 - 比例尺只画有文档像素间距的轴。
 - 预测轮廓标明 "model prediction, not manual annotation"。

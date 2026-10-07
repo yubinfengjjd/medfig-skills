@@ -53,7 +53,7 @@
 - 字号与标签格式跟期刊（第 2 步确认），正文标签不低于期刊下限。
 - 图内文字 = 结果 + 读图编码。免责声明、方法口径、结论、交叉引用、内部代号（终点 / 假设 / 规则编号、列名）进图注；不加图底注释行。规格写代号对照表，代号写进 `[qa] forbidden_patterns`（medfig-render `qa.figure_text_audit` 导出时硬拦）。
 
-## 6. Panel 样式与组图规范（S1–S5，绑定）
+## 6. Panel 样式与组图规范（S1–S7，绑定）
 
 规划阶段就要让每个 panel 满足下列规则；渲染与 QA 阶段按同一编号检查，超标即 FAIL。
 
@@ -63,4 +63,7 @@
 - S4 单 panel 独立导出：每个 panel 另出可编辑 PDF（必需）+ SVG（fonttype 42、文字可选），尺寸与它在组图中的尺寸一致，不带 a/b/c 序号；序号只在组图里出现。命名 `<figure>_<panel>.pdf`（如 `fig2_b.pdf`），并写入 source.json。规格每个 panel 写明该文件名。
 - S5 ROC 样式：正方形坐标；虚线对角 chance line；多次重复（seed / fold）先插值到共同 FPR 网格（`np.interp`，不用已废弃的 `scipy.interp`），画平均曲线 + ±SD 阴影带；图例写 "AUC = mean ± SD"，放右下角；x 轴标 "1 − specificity"，y 轴标 "Sensitivity"；配色 Okabe-Ito。只有单条曲线时不画 SD 带，并在图注说明。样式来源：MenglinLu/Retinal_VascularEvents `visualization/ROC curve.py`（MIT License），实现处保留来源注释；原代码 x 轴标 "Specificity" 为笔误，已更正。
 
-规划自检：逐 panel 核对 S1–S5，不满足的改规格；无法满足的写进"偏离"节并说明原因。
+- S6 病例影像要密、分组、分层，选例可追溯：代表性病例 panel 按类别或队列分组并排；每组 = 一行代表性原图 + 叠加 + 一个多病例图矩阵（每组 ≥ 12 例，全部病例共用一个色阶，colorbar 标原始单位）+ 一行局部放大（放大框在原图上标出）。病例在看图像和模型输出之前按规则抽取：按组分层、固定 seed 随机、每组必须含误判病例，不按置信度或观感挑。panel 写 `case_selection：<规则；seed = N；每组 n（其中误判 m）；候选池>`；source.json 记 `values.case_selection`（seed、rule、strata、per_group、pool、pool_counts）；图注写规则、seed 与候选池限制。病例行标队列 / 真值 / 预测，误判病例用单独的描边色（色板里给"误判"一个角色，不借用类别色）。单病例报告页写 `case_selection：single illustrative case; exempt: <原因>`。
+- S7 主图性能曲线（硬规则）：主图报判别性能且有逐样本分数时，至少一个 ROC 曲线 panel（S5 样式），类别不平衡时加 PR；图例写 AUC 及 95% CI（或多 seed mean ± SD）。点估计、哑铃图、记分卡可作补充 panel，不能代替曲线。没有逐样本分数时，在图标题行下写 `- curve_exempt：<原因>` 并降级为区间点。
+
+规划自检：逐 panel 核对 S1–S7，不满足的改规格；无法满足的写进"偏离"节并说明原因。

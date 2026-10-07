@@ -125,6 +125,7 @@ S2 / S3 检查全部可见 axes：GridSpec、`fig.add_axes`、subfigure 的 axes
 | `structure_strength` | `(x, y, kind="paired"/"mechanism", nbins=10)` -> dict | 画配对 / 机制散点前的预检：paired 要 \|r\| > 0.9；mechanism 要 \|r\| > 0.5 或分箱中位数升幅 > 中位 IQR。不过就换图型。来源 taoge946/academic-figure-patterns（MIT） |
 | `binned_median` | `(x, y, nbins=10, min_count=5)` -> dict | x 分位分箱：center / median / q25 / q75 / count |
 | `exceedance` | `(values, xs=None, n=200)` -> (xs, frac) | 严格大于 x 的样本比例（尾部曲线） |
+| `stratified_cases` | `(df, group, correct, n_correct, n_error, seed, order=None, unique=None, pool="")` -> (selected, record) | 影像病例矩阵选例：每组在对 / 错两层内用 `default_rng(seed)` 无放回抽取，按 `order` 排序后抽（不按置信度或外观）；某层不够数直接报错；`unique`（眼 / 患者 id）重复报错。`record` 写进 `prov.set("case_selection", record)`，规则与 seed 写进图注 |
 
 ## style（补充）
 
@@ -240,6 +241,8 @@ S2 / S3 检查全部可见 axes：GridSpec、`fig.add_axes`、subfigure 的 axes
 | `bscan_with_boundaries` | `(ax, raw, boundaries, band_masks=None, colors=None, band_cmap="viridis")` | 原图 + 边界线（`(K, M)`，按图高归一化）+ 可选带状掩膜 `(B, H, W)`（bool 或 [0, 1] 内的有限值）；掩膜形状不等于原图、或含非有限值 / 越界值抛 `ValueError`；挂 `_anchor_boundaries_px, _anchor_bands` |
 | `concept_map` | `(ax, raw, spatial, vmin, vmax, cmap="magma", threshold=MAP_THRESHOLD, alpha=MAP_ALPHA)` | 共享 `[vmin, vmax]` 的激活图（必填）；归一化值 < threshold 或原值 ≤ 0 透明；挂 `_anchor_mappable, _anchor_upsampled, _anchor_alpha, _anchor_threshold, _anchor_resampled` |
 | `prob_overlay` | `(ax, raw, prob, vmin, vmax, cmap="viridis", resample="bilinear", alpha=MAP_ALPHA)` | 低分辨率概率图叠加（不是掩膜）；`resample` 为 `"bilinear"`/`"nearest"`；挂 `_anchor_resampled = (src_shape, dst_shape, method)`，必须写进图注 |
+| `crop_window` | `(shape, aspect, heat=None, frac=1.0)` -> (y0, y1, x0, x1) | 确定性裁剪窗：给定宽高比的最大窗 × `frac`（< 1 为放大），中心取热图正值质心（无热图取图像中心），越界时平移回图内；窗口写进 provenance |
+| `case_tiles` | `(fig, rect, cases, vmin, vmax, ncols, tile_aspect=1.0, gap=0.04, cmap="magma", error_color="#D55E00", threshold=MAP_THRESHOLD, alpha=MAP_ALPHA, overlay=True, crop_frac=1.0)` -> [ax] | 一组病例的热图矩阵：在 `rect`（figure 坐标）里按 `ncols` 精确摆放等宽小图（`add_axes`，用 `layout="none"` 的 figure），每格是 `crop_window` 裁出的同宽高比切片，不留 letterbox；全部共用 `[vmin, vmax]`；`error=True` 的病例画错例色框；`overlay=False` 只画原图切片（局部放大行）。每格挂 `_anchor_case`（id、error、crop、resampled）。整组标成一个 panel：`mark_panel(axes[0], "b", extra_axes=axes[1:])` |
 
 
 ## review

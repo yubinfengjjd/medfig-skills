@@ -145,6 +145,38 @@ def binned_median(x, y, nbins=10, min_count=5):
     return dict(center=a[:, 0], median=a[:, 1], q25=a[:, 2], q75=a[:, 3], count=a[:, 4].astype(int))
 
 
+def stratified_cases(df, group, correct, n_correct, n_error, seed, order=None, unique=None, pool=""):
+    """Stratified random case selection for an imaging matrix: per value of ``group``, draw ``n_error``
+    rows with ``correct`` False and ``n_correct`` with ``correct`` True, ``np.random.default_rng(seed)``
+    without replacement, from ``df`` sorted by ``order`` (default: the index) -- no confidence or visual
+    ranking. ``unique`` (column, e.g. eye / patient id): reject a draw that repeats an id. Raises when a
+    stratum has fewer rows than requested (never silently shrink the matrix).
+
+    Returns ``(selected, record)``; ``record`` goes into provenance as ``values.case_selection``
+    (seed, rule, strata, per_group counts, pool description, pool_counts)."""
+    d = df.sort_values(order) if order else df.sort_index()
+    rng = np.random.default_rng(seed)
+    picks, per_group, pool_counts = [], {}, {}
+    for g, fr in d.groupby(group, sort=True):
+        per_group[str(g)] = {}
+        for ok, n in ((False, n_error), (True, n_correct)):
+            s = fr[fr[correct].astype(bool) == ok]
+            key = "correct" if ok else "misclassified"
+            pool_counts[f"{g}|{key}"] = int(len(s))
+            if len(s) < n:
+                raise ValueError(f"group {g!r} {key}: pool has {len(s)} rows < {n} requested")
+            picks.append(s.iloc[np.sort(rng.choice(len(s), n, replace=False))])
+            per_group[str(g)][key] = int(n)
+    sel = pd.concat(picks)
+    if unique and sel[unique].duplicated().any():
+        raise ValueError(f"selected cases repeat {unique}: {sorted(sel.loc[sel[unique].duplicated(), unique])}")
+    record = dict(seed=int(seed), strata=[str(group), str(correct)], per_group=per_group, pool=str(pool),
+                  pool_counts=pool_counts,
+                  rule=f"per {group}: numpy default_rng({seed}).choice without replacement within correct / "
+                       f"misclassified strata, rows sorted by {order or 'index'}; no confidence or visual ranking")
+    return sel, record
+
+
 def exceedance(values, xs=None, n=200):
     """Fraction of samples strictly above each x (survival-style tail curve of an error / score).
     ``xs`` default: ``n`` points spanning the finite values. Returns (xs, fraction)."""

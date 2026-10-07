@@ -29,6 +29,7 @@
 
 ## 3. 主图
 ### Fig <N> <主题>（<k> panel；<版式一句话>；尺寸 <w×h in>）
+- curve_exempt：<仅当本图报判别性能却没有逐样本分数、画不出 ROC / PR 时填写原因；有曲线 panel 时删掉本行>（S7）
 - **a <短标题>**
   - claim：
   - data：
@@ -38,6 +39,7 @@
   - counterfactual：
   - colour：<数据图元 → Okabe-Ito 色名 / hex；线型或 marker 冗余；灰色仅用于哪些辅助元素；与队列色不冲突的确认>（S3）
   - panel_file：<figure>_<panel>.pdf（另附 .svg；尺寸 <w×h in> 与组图中一致；不带 a/b/c 序号）（S4）
+  - case_selection：<仅病例影像 panel：分组 <类别 / 队列>；按组分层、固定 seed 随机，seed = <N>；每组 <n ≥ 12> 例（其中误判 <m>）；候选池 <范围及限制>；单病例报告页写 "single illustrative case; exempt: <原因>">（S6）
 
 ## 4. 附图
 | 图 | panel | 形式 | 数据 | claim | 对应主图 |
@@ -63,7 +65,7 @@
 1. 每图 QA 通过（几何、字号下限、真减号、禁用词）。
 2. 数值回核：source.json 关键数与权威文档一致。
 3. 灰度版分组可辨；panel 数与规格一致。
-4. S1–S5：左右留白 ≤ 15%（letterbox 不算达标）；无纯文字 panel；所有数据元素有色，灰色只用于辅助元素（坐标轴、网格、参考线、对角线、底带）；每 panel 单独 PDF（必需）+ SVG 齐全；ROC 为 mean ± SD 样式。
+4. S1–S7：左右留白 ≤ 15%（letterbox 不算达标）；无纯文字 panel；所有数据元素有色，灰色只用于辅助元素（坐标轴、网格、参考线、对角线、底带）；每 panel 单独 PDF（必需）+ SVG 齐全；ROC 为 mean ± SD 样式；报判别性能的主图都有 ROC / PR 曲线 panel 或写了 curve_exempt（S7）；病例影像按组分层、每组 ≥ 12 例含误判、共用色阶，选例规则与 seed 在图注和 source.json `values.case_selection` 里（S6）。
 5. 图注含单位、n、区间类型、bootstrap 方式、限制声明；不含开发史和丢弃版本（`mainline_rules.md`）。
 
 ## 10. 待确认
@@ -72,7 +74,7 @@
 
 ## 填写要点
 
-- §3 每个 panel 五字段齐全（见 panel_rules.md），另加 colour 与 panel_file 两项（S3, S4）；影像列的 width_ratios 写明按图像宽高比（S1）；附图表格的 claim 列同样不能空。
+- §3 每个 panel 五字段齐全（见 panel_rules.md），另加 colour 与 panel_file 两项（S3, S4），病例影像 panel 再加 case_selection（S6），报性能却无曲线的主图在标题行下加 curve_exempt（S7）；影像列的 width_ratios 写明按图像宽高比（S1）；附图表格的 claim 列同样不能空。
 - §1 的每条口径同步进口径裁决表；§8 的每条偏离交付时也进裁决表（E8）。
 - §6 森林类行数 > 3 即自检不通过。
 - §10 非空时，状态行保持"待用户审阅"，不得开始绘图。

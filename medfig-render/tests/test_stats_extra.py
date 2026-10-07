@@ -88,3 +88,38 @@ def test_exceedance_and_binned_median():
     assert len(b["center"]) == 5 and np.all(np.diff(b["median"]) > 0)
     assert np.all(b["q25"] <= b["median"]) and np.all(b["median"] <= b["q75"])
     assert int(np.sum(b["count"])) == 1000
+
+
+def _pool(n=20, groups=("A", "B")):
+    import pandas as pd
+    rng = np.random.default_rng(3)
+    return pd.DataFrame(dict(case=[f"{g}{i:02d}" for g in groups for i in range(n)],
+                             group=[g for g in groups for _ in range(n)],
+                             correct=rng.uniform(size=n * len(groups)) > 0.3))
+
+
+def test_stratified_cases_counts_seed_and_record():
+    df = _pool()
+    sel, rec = stats.stratified_cases(df, "group", "correct", n_correct=5, n_error=2, seed=11, order="case",
+                                      unique="case", pool="test pool")
+    assert len(sel) == 14
+    for g in ("A", "B"):
+        s = sel[sel.group == g]
+        assert (~s.correct).sum() == 2 and s.correct.sum() == 5
+    assert rec["seed"] == 11 and rec["per_group"]["A"] == {"misclassified": 2, "correct": 5}
+    assert rec["pool"] == "test pool" and "no confidence or visual ranking" in rec["rule"]
+    assert sum(v for k, v in rec["pool_counts"].items() if k.startswith("A|")) == 20
+    again, _ = stats.stratified_cases(df.sample(frac=1, random_state=0), "group", "correct", 5, 2, 11, order="case")
+    assert list(again.case) == list(sel.case)  # input row order does not change the draw
+    other, _ = stats.stratified_cases(df, "group", "correct", 5, 2, 12, order="case")
+    assert list(other.case) != list(sel.case)
+
+
+def test_stratified_cases_refuses_small_strata_and_repeats():
+    df = _pool(n=6)
+    with pytest.raises(ValueError, match="pool has"):
+        stats.stratified_cases(df, "group", "correct", n_correct=5, n_error=5, seed=1)
+    df2 = _pool()
+    df2["eye"] = "same"
+    with pytest.raises(ValueError, match="repeat eye"):
+        stats.stratified_cases(df2, "group", "correct", 2, 1, seed=1, unique="eye")
