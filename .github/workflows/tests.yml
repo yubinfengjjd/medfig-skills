@@ -20,10 +20,19 @@ jobs:
       # calls) into ~/.claude/skills and ~/.codex/skills, exactly as a user would.
       - name: Install skills
         run: python install.py
+      # The layout tests measure text with Arial. ttf-mscorefonts-installer downloads from SourceForge and exits 0
+      # even when a mirror times out (then no font is installed), so retry the download and fail if Arial is absent.
       - name: Install fonts
         run: |
           echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections
           sudo apt-get update -qq && sudo apt-get install -y -qq ttf-mscorefonts-installer fonts-dejavu-core
+          for i in 1 2 3; do
+            fc-list | grep -qi "/arial.ttf" && break
+            echo "Arial missing after attempt $i; retrying the core-font download"
+            sleep 20
+            sudo dpkg-reconfigure -f noninteractive ttf-mscorefonts-installer || true
+          done
+          fc-list | grep -i "/arial.ttf" || { echo "::error::Arial not installed (SourceForge download failed)"; exit 1; }
           rm -rf ~/.cache/matplotlib
       - name: Run tests
         run: python -m pytest -q -p no:cacheprovider
