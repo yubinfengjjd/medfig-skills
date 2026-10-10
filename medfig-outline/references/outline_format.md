@@ -8,7 +8,7 @@ language: zh            # 要点语言；小节标题英文
 figures_root: out/figures      # 相对项目根；source.json / pdf / png 所在
 tables_root: out/tables
 captions: [docs/captions_zh.md, docs/captions]   # 图注草稿（文件或目录）
-upstream_root: <可选，上游分析仓库根目录>
+code_roots: [<上游分析仓库所在目录>, ...]       # 可选：code 路径先按项目根找，再按这些目录依次找（绝对路径或相对项目根）
 main_figures: [fig2, fig3, ...]                  # 每个主图至少被一个 Results 节覆盖（design_assets 除外）
 design_assets: [T1, Fig1, ST01]                  # Methods 能引用的设计资产：数据集表、研究设计图、方法类附表
 pending: [Fig1]                                  # 可选：外部绘制、还没导出的图（引用照常排序，不查文件）
@@ -27,9 +27,9 @@ methods:
     items:                                       # 本节引用的设计资产（只能是 design_assets）
       - {ref: T1, what: 各队列的角色、设备与规模}
     code:                                        # 只列分析代码（计算）；绘图 / 表格脚本不列
-      - path: <upstream>/src/x.py
+      - path: <upstream>/src/x.py                # 必须能在项目根或 code_roots 下找到，原文件拷进 code/；找不到写 TODO
         role: 计算
-        guess: true                              # 推测的上游代码
+        guess: true                              # 推测的上游代码（只影响大纲里的"（推测）"标注，照样拷贝）
 results:
   - id: "3.1"
     title: <一句话发现，英文>

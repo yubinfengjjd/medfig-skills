@@ -34,6 +34,9 @@ def proj(tmp_path):
                                          encoding="utf-8")
     (p / "out/tables/T1.md").write_text("**T1.** x\n", encoding="utf-8")
     (p / "tables/build_tables.py").write_text("# tables", encoding="utf-8")
+    (p / "src").mkdir()
+    for name in ("splits.py", "eval.py"):
+        (p / "src" / name).write_text(f"# {name}", encoding="utf-8")
     (p / "docs/captions/fig2.md").write_text("## Fig2\n\n**图 2** x\n", encoding="utf-8")
     (p / "docs/captions_zh.md").write_text("## Fig3\n\n**图 3** y\n", encoding="utf-8")
     return p
@@ -153,11 +156,42 @@ def test_build_docx_md_and_folders(proj, tmp_path):
     assert (r31 / "tables/T1.csv").is_file() and (r31 / "tables/T1.md").is_file()
     assert (r31 / "captions/fig2.md").is_file()
     assert not (r31 / "code/fig2.py").exists()  # plotting scripts are not part of the method
-    assert "src/eval.py（推测）" in (r31 / "code/code.md").read_text(encoding="utf-8")
+    assert (r31 / "code/eval.py").read_text(encoding="utf-8") == "# eval.py"  # source file, guess or not
+    assert not (r31 / "code/code.md").exists()  # the path list lives in the outline, not in the folder
+    assert (out / "2_Methods/2.1_Cohorts/code/splits.py").is_file()
     assert (out / "2_Methods/2.1_Cohorts/tables/T1.csv").is_file()
     cap3 = (out / "3_Results/3.2_Internal/captions/fig3.md").read_text(encoding="utf-8")
     assert "图 3" in cap3  # caption section extracted from the combined captions file
     assert (proj / "out/figures/main/fig2.pdf").is_file()  # copies, not moves
+
+
+def test_code_paths_must_exist_and_code_roots_resolve(proj, tmp_path):
+    o = _outline()
+    o["results"][0]["code"].append({"path": "repo/tools/run.py", "role": "计算", "guess": True})
+    o["results"][1]["code"].append({"path": "TODO", "role": "计算"})
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert out == [i for i in out if "repo/tools/run.py" in i and "code_roots" in i] and len(out) == 1
+    upstream = tmp_path / "upstream"
+    (upstream / "repo/tools").mkdir(parents=True)
+    (upstream / "repo/tools/run.py").write_text("# run", encoding="utf-8")
+    o["code_roots"] = [str(upstream)]
+    assert outline_check.check(_write(tmp_path, o), proj) == []
+    out_dir = tmp_path / "outline_out"
+    outline_build.build(_write(tmp_path, o), proj, out_dir)
+    assert (out_dir / "3_Results/3.1_Domain_shift/code/run.py").read_text(encoding="utf-8") == "# run"
+
+
+def test_same_name_code_files_keep_their_paths(proj, tmp_path):
+    (proj / "src/a").mkdir()
+    (proj / "src/a/eval.py").write_text("# a/eval.py", encoding="utf-8")
+    o = _outline()
+    o["results"][0]["code"].append({"path": "src/a/eval.py", "role": "计算"})
+    out_dir = tmp_path / "outline_out"
+    outline_build.build(_write(tmp_path, o), proj, out_dir)
+    code = out_dir / "3_Results/3.1_Domain_shift/code"
+    assert (code / "src/eval.py").read_text(encoding="utf-8") == "# eval.py"
+    assert (code / "src/a/eval.py").read_text(encoding="utf-8") == "# a/eval.py"
+    assert not (code / "eval.py").exists()
 
 
 def test_build_refuses_output_inside_project(proj, tmp_path):

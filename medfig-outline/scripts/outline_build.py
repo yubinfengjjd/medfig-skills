@@ -251,8 +251,8 @@ def _caption_text(root, o, name):
 
 
 def _copy_section(root, o, sec, results, dest):
-    """Copy the outputs this section cites (figures, tables, captions) and its analysis-code list. Plotting and
-    table-building scripts are not copied: they draw the figures, they are not part of the method."""
+    """Copy the outputs this section cites (figures, tables, captions) and the source files of its analysis code.
+    Plotting and table-building scripts are not copied: they draw the figures, they are not part of the method."""
     figs, tabs = _refs(sec, results)
     pending = _pending(o)
     (dest / "figures").mkdir(parents=True, exist_ok=True)
@@ -275,14 +275,14 @@ def _copy_section(root, o, sec, results, dest):
                 shutil.copy2(f, dest / "tables" / f.name)
     if not sec.get("code"):
         return
-    (dest / "code").mkdir(exist_ok=True)
-    lines = [f"# {sec['id']} 分析代码（只作为脑内映射）", ""]
-    for c in sec["code"]:
-        lines.append(f"- [{c.get('role', '')}] `{_code_line(c)}`")
-        p = root / c["path"] if c.get("path") and not c.get("guess") else None
-        if p is not None and p.is_file() and p.suffix == ".py":
-            shutil.copy2(p, dest / "code" / p.name)
-    (dest / "code" / "code.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    # source files themselves, flat by file name; files sharing a name keep their listed relative path
+    files = list(dict.fromkeys((c["path"], f) for c in sec["code"]
+                               if (f := outline_check.code_file(o, root, c.get("path")))))
+    names = [f.name for _, f in files]
+    for rel, f in files:
+        target = dest / "code" / (f.name if names.count(f.name) == 1 else rel)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(f, target)
 
 
 def build(outline_path, project, out, figkit_toml=None):

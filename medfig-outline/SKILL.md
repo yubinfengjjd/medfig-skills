@@ -43,7 +43,7 @@ description: Use when a medical research figure set is finished and the user wan
 - **曲线与病例矩阵**：引用 ROC / PR 曲线 panel 的段落点出 AUC（95% CI 或 mean ± SD）和比较对象；引用病例矩阵的段落点出其中含误判病例。有病例矩阵的图（`values.case_selection`），选例规则（分层、固定 seed 随机、每组例数含误判、候选池）在 Methods 评估 / 统计小节写一条要点，检查脚本会核对 seed 和"随机"。
 - Results 的数值写约数 / 区间（"QWK 约 0.64–0.66"），每个数在 `numbers` 里登记出处（`source.json` 的键路径或表格的行列）；Methods 末节（统计）用标准写法交代一次研究的探索性质，其余地方不写。
 - 内部代号：正文用描述名，第一次出现可括注代号便于对照原始材料（例如"三分类（内部代号 E2）"）；丢弃版本的名称和开发史词一律不出现。
-- 代码：只列产生结果的分析代码（训练、评估、统计），按 `source.json` 的数据文件名匹配上游仓库，标"（推测）"，找不到写 `TODO`。**绘图脚本和表格脚本不列、不拷**：它们只是把结果画出来，不属于方法；大纲引用输出的图 / 表，并说明它的科学意义。
+- 代码：只列产生结果的分析代码（训练、评估、统计），按 `source.json` 的数据文件名匹配上游仓库，标"（推测）"，找不到写 `TODO`。上游仓库不在项目根下时，把它所在目录写进 `code_roots`；列出的每个路径都必须找得到，生成时原文件拷进该节 `code/`。**绘图脚本和表格脚本不列、不拷**：它们只是把结果画出来，不属于方法；大纲引用输出的图 / 表，并说明它的科学意义。
 
 ## 第 4 步：检查
 
@@ -58,7 +58,7 @@ python medfig-outline/scripts/outline_check.py outline.yaml --project <项目根
 - Methods 的 `focus` 不含结果数字（年份、维度、样本量量级之类用 `allow_numbers` 放行）。
 - 引用次序：四个编号序列都按首次引用连续编号，panel 从 a 开始；每个导出的图、panel、表都被引用或列进 `excluded`；Methods 只引用 `design_assets`。次序不对时报出改号建议。
 - 有病例矩阵的被引用图：Methods focus 里写了选例规则（含该图 `values.case_selection.seed` 与"随机 / random"）。
-- 每个被引用的资产都有一行"图 / 表"说明科学意义；`code` 里没有绘图 / 表格脚本。
+- 每个被引用的资产都有一行"图 / 表"说明科学意义；`code` 里没有绘图 / 表格脚本；`code` 列出的每个路径（`TODO` 除外）都能在项目根或 `code_roots` 下找到。
 - **全覆盖**：正文和补充材料的每张 Fig、每个 panel、每张 Table 都在大纲里被引用。检查脚本最后打印 `coverage: N/N manuscript assets cited`，不是全数就不交付。外部绘制的图（`pending`）也要被引用；导出时没记录 panel 清单的图会报错，因为无法核对 panel 覆盖。
 - 禁用词（`qa.banned_in_text`）、开发史（`qa.dev_history_in_text`）、项目代号（`[qa] forbidden_patterns`，括注"内部代号"的位置除外）。
 
@@ -80,7 +80,8 @@ python medfig-outline/scripts/outline_build.py outline.yaml --project <项目根
       figures/   该节引用的图（PDF + PNG + source.json）
       tables/    该节引用的表（md + csv + tex）
       captions/  该节相关图的图注草稿
-      code/      code.md（分析代码路径清单，含"推测"与 TODO）+ 能找到的分析脚本；不放绘图 / 表格脚本
+      code/      该节分析代码的原文件（含标"推测"的），按文件名平铺，同名文件保留各自的相对路径；
+                 不放 Markdown 清单（路径与"推测"标注在大纲"相关代码"里，TODO 在交付时列出），不放绘图 / 表格脚本
 ```
 
 一个文件被几节同时用到时每节各拷一份，每个文件夹单独打开都完整。输出目录必须在项目根之外，已存在时先列出内容再问用户是否覆盖。

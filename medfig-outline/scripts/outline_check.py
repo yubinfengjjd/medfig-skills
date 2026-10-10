@@ -340,6 +340,31 @@ def _items_and_code(o, first):
     return out
 
 
+def code_file(o, root, path):
+    """Resolve a ``code`` path against the project root, then each ``code_roots`` entry (absolute or relative to
+    the project root). None for TODO / empty / not found."""
+    if not path or str(path).strip().upper() == "TODO":
+        return None
+    for base in [root, *(root / r for r in o.get("code_roots") or [])]:
+        f = Path(base) / path
+        if f.is_file():
+            return f
+    return None
+
+
+def _code_found(o, root):
+    """Every listed code path must exist (its source file is copied into the section folder); unknown code is TODO."""
+    out = []
+    for kind, secs in (("Methods", o.get("methods", [])), ("Results", o.get("results", []))):
+        for sec in _nodes(secs):
+            for c in sec.get("code", []):
+                p = c.get("path")
+                if p and str(p).strip().upper() != "TODO" and code_file(o, root, p) is None:
+                    out.append(f"code: {kind} {sec['id']} lists {p}, not found under the project root or code_roots "
+                               "(add its repository to code_roots, or write TODO)")
+    return out
+
+
 def _source_json(root, figures_root, name):
     hits = list((root / figures_root).glob(f"*/{name}.source.json")) + list((root / figures_root).glob(f"{name}.source.json"))
     return hits[0] if hits else None
@@ -565,7 +590,7 @@ def check(outline_path, project, figkit_toml=None):
     out += _style(o)
     out += _structure(o, {**STYLE, **(o.get("style") or {})})
     order, first = _order(o, root)
-    out += order + _items_and_code(o, first)
+    out += order + _items_and_code(o, first) + _code_found(o, root)
     return out
 
 
