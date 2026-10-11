@@ -18,7 +18,7 @@ import outline_check  # noqa: E402
 
 FIG_EXT = ("pdf", "png", "svg")
 TAB_EXT = ("csv", "md", "tex")
-ROLE_ORDER = ["计算", "绘图", "表格"]
+ROLE_ORDER = ["计算", "配置", "回执"]
 
 
 # ------------------------------------------------------------------------------------------------ model
@@ -61,11 +61,35 @@ def _cite_tail(p):
     return f"（{'、'.join(_pretty_ref(c) for c in p['cites'])}）" if p.get("cites") else ""
 
 
-def _code_roles(code):
-    """[(role, '`a.py`、`b.py`（推测）')] in 计算 / 绘图 / 表格 order: one line per role, not one per file."""
+def _code_roles(code, deps=()):
+    """[(role, line)] in 计算 / 配置 / 回执 order. An entry with ``symbols`` / ``note`` gets its own line
+    ('`decision.py` · `DecisionLayer.forward` —— 线性决策头'), so each point maps to the function that implements
+    it; plain entries share one line per role. ``deps`` (direct imports copied alongside) close the list."""
     roles = ROLE_ORDER + sorted({c.get("role", "") for c in code} - set(ROLE_ORDER))
-    return [(r, "、".join(f"`{_code_line(c)}`" for c in code if c.get("role", "") == r))
-            for r in roles if any(c.get("role", "") == r for c in code)]
+    out = []
+    for r in roles:
+        mine = [c for c in code if c.get("role", "") == r]
+        plain = [c for c in mine if not (c.get("symbols") or c.get("note"))]
+        for c in mine:
+            if c in plain:
+                continue
+            syms = "、".join(f"`{s}`" for s in c.get("symbols") or [])
+            out.append((r, f"`{_code_line(c)}`" + (f" · {syms}" if syms else "")
+                        + (f" —— {c['note']}" if c.get("note") else "")))
+        if plain:
+            out.append((r, "、".join(f"`{_code_line(c)}`" for c in plain)))
+    if deps:
+        out.append(("依赖（直接调用，已拷入 code/）", "、".join(f"`{d}`" for d in deps)))
+    return out
+
+
+def _deps(o, root, code):
+    """Direct project imports of the section's code entries that are not listed themselves."""
+    listed = {str(c.get("path")) for c in code}
+    out = []
+    for c in code:
+        out += [d for d in outline_check.direct_deps(o, root, c.get("path")) if d not in listed]
+    return list(dict.fromkeys(out))
 
 
 def _code_line(c):
@@ -94,7 +118,7 @@ def _md_body(sec, results, pending=frozenset()):
         if _items(sec):
             L += ["", "**引用图 / 表：**", ""] + [f"- {_item_line(i, pending)}" for i in _items(sec)]
         if sec.get("code"):
-            L += ["", "**关联代码（只作为你脑内映射）：**", ""] + [f"- {r}：{line}" for r, line in _code_roles(sec["code"])]
+            L += ["", "**关联代码（只作为你脑内映射）：**", ""] + [f"- {r}：{line}" for r, line in _code_roles(sec["code"], sec.get("_deps", ()))]
         return L
     if sec.get("paragraphs"):
         L += ["**写作要点**", ""]
@@ -104,7 +128,7 @@ def _md_body(sec, results, pending=frozenset()):
     if _items(sec):
         L += ["", "**图 / 表**", ""] + [f"- {_item_line(i, pending)}" for i in _items(sec)]
     if sec.get("code"):
-        L += ["", "**相关代码**", ""] + [f"- {role}：{line}" for role, line in _code_roles(sec["code"])]
+        L += ["", "**相关代码**", ""] + [f"- {role}：{line}" for role, line in _code_roles(sec["code"], sec.get("_deps", ()))]
     if sec.get("boundaries"):
         L += ["", "**措辞边界**", ""] + [f"- {t}" for t in sec["boundaries"]]
     return L
@@ -193,7 +217,7 @@ def to_docx(o, path):
                         para(_item_line(i, pending), level=2)
                 if sec.get("code"):
                     para("关联代码（只作为你脑内映射）：", level=1)
-                    for role, line in _code_roles(sec["code"]):
+                    for role, line in _code_roles(sec["code"], sec.get("_deps", ())):
                         para(f"{role}：{line}", level=2)
                 continue
             if sec.get("paragraphs"):
@@ -212,7 +236,7 @@ def to_docx(o, path):
                     para(_item_line(i, pending), level=1)
             if sec.get("code"):
                 para("相关代码", bold=True)
-                for role, line in _code_roles(sec["code"]):
+                for role, line in _code_roles(sec["code"], sec.get("_deps", ())):
                     para(f"{role}：{line}", level=1)
             if sec.get("boundaries"):
                 para("措辞边界", bold=True)
@@ -275,9 +299,10 @@ def _copy_section(root, o, sec, results, dest):
                 shutil.copy2(f, dest / "tables" / f.name)
     if not sec.get("code"):
         return
-    # source files themselves, flat by file name; files sharing a name keep their listed relative path
-    files = list(dict.fromkeys((c["path"], f) for c in sec["code"]
-                               if (f := outline_check.code_file(o, root, c.get("path")))))
+    # source files themselves (listed entries + their direct imports), flat by file name; files sharing a name
+    # keep their relative path
+    rels = [c["path"] for c in sec["code"] if c.get("path")] + list(sec.get("_deps", ()))
+    files = list(dict.fromkeys((r, f) for r in rels if (f := outline_check.code_file(o, root, r))))
     names = [f.name for _, f in files]
     for rel, f in files:
         target = dest / "code" / (f.name if names.count(f.name) == 1 else rel)
@@ -294,6 +319,9 @@ def build(outline_path, project, out, figkit_toml=None):
         raise RuntimeError("outline_check reported issues:\n" + "\n".join(issues))
     o = yaml.safe_load(Path(outline_path).read_text(encoding="utf-8"))
     o["_coverage"] = outline_check.coverage(o, root)
+    for kind in ("methods", "results"):
+        for sec, _, _ in outline_check._tree(o.get(kind, [])):
+            sec["_deps"] = _deps(o, root, sec.get("code", []))
     out.mkdir(parents=True, exist_ok=True)
     md = out / "写作大纲.md"
     md.write_text(to_md(o), encoding="utf-8")

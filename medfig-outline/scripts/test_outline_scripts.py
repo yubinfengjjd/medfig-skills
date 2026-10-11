@@ -194,6 +194,63 @@ def test_same_name_code_files_keep_their_paths(proj, tmp_path):
     assert not (code / "eval.py").exists()
 
 
+def _upstream(tmp_path):
+    """repo/src/pkg with a model importing a submodule, a relative import, an empty __init__, and a config."""
+    up = tmp_path / "up"
+    pkg = up / "repo/src/pkg"
+    (pkg / "models").mkdir(parents=True)
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "models/__init__.py").write_text('"""models"""\n', encoding="utf-8")
+    (pkg / "models/model.py").write_text(
+        "import numpy as np\nfrom pkg.models import head\nfrom . import util\nfrom pkg import constants\n\n"
+        "class Model:\n    def forward(self, x):\n        return x\n", encoding="utf-8")
+    (pkg / "models/head.py").write_text("def fit_head():\n    pass\nW = 1\n", encoding="utf-8")
+    (pkg / "models/util.py").write_text("", encoding="utf-8")
+    (pkg / "constants.py").write_text("N = 16\n", encoding="utf-8")
+    (up / "repo/tools").mkdir()
+    (up / "repo/tools/run.py").write_text("import sys\nfrom pkg.models import model\n", encoding="utf-8")
+    (up / "repo/configs").mkdir()
+    (up / "repo/configs/base.yaml").write_text("concepts:\n  residual_dim: 8\n", encoding="utf-8")
+    return up
+
+
+def test_direct_deps_one_level(proj, tmp_path):
+    o = {"code_roots": [str(_upstream(tmp_path))]}
+    deps = outline_check.direct_deps(o, proj, "repo/src/pkg/models/model.py")
+    assert sorted(deps) == ["repo/src/pkg/constants.py", "repo/src/pkg/models/head.py", "repo/src/pkg/models/util.py"]
+    # a script outside the package resolves through repo/src; one level only (not model.py's imports)
+    assert outline_check.direct_deps(o, proj, "repo/tools/run.py") == ["repo/src/pkg/models/model.py"]
+    assert outline_check.direct_deps(o, proj, "repo/configs/base.yaml") == []
+
+
+def test_symbols_must_exist(proj, tmp_path):
+    o = _outline(code_roots=[str(_upstream(tmp_path))])
+    o["methods"][0]["code"] = [
+        {"path": "repo/src/pkg/models/model.py", "role": "计算", "symbols": ["Model", "Model.forward"]},
+        {"path": "repo/src/pkg/models/head.py", "role": "计算", "symbols": ["fit_head", "W"]},
+        {"path": "repo/configs/base.yaml", "role": "配置", "symbols": ["concepts.residual_dim"]}]
+    assert outline_check.check(_write(tmp_path, o), proj) == []
+    o["methods"][0]["code"][0]["symbols"] = ["Model.backward", "fit_model"]
+    o["methods"][0]["code"][2]["symbols"] = ["concepts.dim"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert len(out) == 3 and all("symbol" in i and "not found" in i for i in out)
+
+
+def test_build_copies_direct_deps_and_renders_symbols(proj, tmp_path):
+    o = _outline(code_roots=[str(_upstream(tmp_path))])
+    o["methods"][0]["code"] = [
+        {"path": "repo/src/pkg/models/model.py", "role": "计算", "symbols": ["Model.forward"], "note": "线性决策头"},
+        {"path": "repo/configs/base.yaml", "role": "配置", "symbols": ["concepts.residual_dim"]}]
+    out_dir = tmp_path / "outline_out"
+    res = outline_build.build(_write(tmp_path, o), proj, out_dir)
+    code = out_dir / "2_Methods/2.1_Cohorts/code"
+    assert sorted(p.name for p in code.iterdir()) == ["base.yaml", "constants.py", "head.py", "model.py", "util.py"]
+    md = Path(res["md"]).read_text(encoding="utf-8")
+    assert "计算：`repo/src/pkg/models/model.py` · `Model.forward` —— 线性决策头" in md
+    assert "配置：`repo/configs/base.yaml` · `concepts.residual_dim`" in md
+    assert "依赖（直接调用，已拷入 code/）：`repo/src/pkg/models/head.py`" in md
+
+
 def test_build_refuses_output_inside_project(proj, tmp_path):
     with pytest.raises(ValueError, match="outside the project"):
         outline_build.build(_write(tmp_path, _outline()), proj, proj / "outline")

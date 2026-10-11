@@ -15,6 +15,7 @@ Usage: python outline_check.py outline.yaml --project <root> [--figkit-toml <tom
 Exit 1 when any issue is found. Only reads.
 """
 import argparse
+import ast
 import csv
 import json
 import re
@@ -343,25 +344,135 @@ def _items_and_code(o, first):
 def code_file(o, root, path):
     """Resolve a ``code`` path against the project root, then each ``code_roots`` entry (absolute or relative to
     the project root). None for TODO / empty / not found."""
+    hit = _code_hit(o, root, path)
+    return hit[1] if hit else None
+
+
+def _code_hit(o, root, path):
+    """(base, file) for a ``code`` path, or None."""
     if not path or str(path).strip().upper() == "TODO":
         return None
-    for base in [root, *(root / r for r in o.get("code_roots") or [])]:
-        f = Path(base) / path
+    for base in [Path(root), *(Path(root) / r for r in o.get("code_roots") or [])]:
+        f = base / path
         if f.is_file():
-            return f
+            return base, f
     return None
 
 
+def _module_file(top, name):
+    p = top / Path(*name.split("."))
+    for c in (p.with_suffix(".py"), p / "__init__.py"):
+        if c.is_file():
+            return c
+    return None
+
+
+def _package_dir(f, base):
+    """Directory that holds the top-level package of ``f`` (walks up while ``__init__.py`` exists)."""
+    d = f.parent
+    while (d / "__init__.py").is_file() and d.parent != d and base in d.parents:
+        d = d.parent
+    return d
+
+
+def direct_deps(o, root, path):
+    """Project files a code entry imports directly (one level, not transitive), as paths relative to the base
+    (project root or ``code_roots`` entry) they were found under. Imports resolve against the entry's own package,
+    the ``src/`` folders above it, and ``<base>/<repo>/src`` of every code root (scripts that put another
+    repository on ``sys.path``); stdlib and third-party imports are ignored, and so are empty ``__init__.py``."""
+    hit = _code_hit(o, root, path)
+    if not hit or hit[1].suffix != ".py":
+        return []
+    base, f = hit
+    tops = [(_package_dir(f, base), base)]
+    for a in f.parents:
+        if a == base.parent:
+            break
+        if (a / "src").is_dir():
+            tops.append((a / "src", base))
+    for b in [Path(root), *(Path(root) / r for r in o.get("code_roots") or [])]:
+        if b.is_dir():
+            tops += [(c / "src", b) for c in sorted(b.iterdir()) if (c / "src").is_dir()]
+    pkg = list(f.relative_to(tops[0][0]).with_suffix("").parts[:-1])
+    names = []
+    try:
+        tree = ast.parse(f.read_text(encoding="utf-8"))
+    except (SyntaxError, UnicodeDecodeError):
+        return []
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Import):
+            names += [a.name for a in n.names]
+        elif isinstance(n, ast.ImportFrom):
+            mod = n.module or ""
+            if n.level:
+                mod = ".".join(pkg[: len(pkg) - n.level + 1] + ([mod] if mod else []))
+            # "from pkg import mod" may name a submodule: prefer it over the package __init__
+            names += [f"{mod}.{a.name}" if mod else a.name for a in n.names] + [mod]
+    out = []
+    for name in names:
+        for top, b in tops:
+            m = _module_file(top, name) if name else None
+            if m is None or m == f or b not in m.parents:
+                continue
+            if m.name == "__init__.py" and not m.read_text(encoding="utf-8").strip():
+                break
+            out.append((m, b))
+            break
+    files = list(dict.fromkeys(out))
+    # "from pkg import mod" yields both pkg/__init__.py and pkg/mod.py; the submodule is the real dependency
+    pkgs = {m.parent for m, _ in files if m.name != "__init__.py"}
+    files = [(m, b) for m, b in files if not (m.name == "__init__.py" and m.parent in pkgs)]
+    return [m.relative_to(b).as_posix() for m, b in files]
+
+
+def _symbol_found(f, sym):
+    """A function / class / Class.method in a .py file, a dotted key path in yaml / json, or literal text."""
+    text = f.read_text(encoding="utf-8", errors="replace")
+    if f.suffix == ".py":
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            return sym in text
+        top = {n.name: n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
+        assigned = {t.id for n in tree.body if isinstance(n, (ast.Assign, ast.AnnAssign))
+                    for t in (n.targets if isinstance(n, ast.Assign) else [n.target]) if isinstance(t, ast.Name)}
+        head, _, rest = sym.partition(".")
+        if not rest:
+            return head in top or head in assigned
+        node = top.get(head)
+        return isinstance(node, ast.ClassDef) and any(
+            getattr(b, "name", None) == rest for b in node.body)
+    if f.suffix in (".yaml", ".yml", ".json"):
+        try:
+            data = json.loads(text) if f.suffix == ".json" else yaml.safe_load(text)
+        except (ValueError, yaml.YAMLError):
+            return sym in text
+        for k in sym.split("."):
+            if not isinstance(data, dict) or k not in data:
+                return False
+            data = data[k]
+        return True
+    return sym in text
+
+
 def _code_found(o, root):
-    """Every listed code path must exist (its source file is copied into the section folder); unknown code is TODO."""
+    """Every listed code path must exist (its source file is copied into the section folder); unknown code is TODO.
+    Every listed symbol must exist in its file, so the outline never points at a function that is not there."""
     out = []
     for kind, secs in (("Methods", o.get("methods", [])), ("Results", o.get("results", []))):
         for sec in _nodes(secs):
             for c in sec.get("code", []):
                 p = c.get("path")
-                if p and str(p).strip().upper() != "TODO" and code_file(o, root, p) is None:
+                if not p or str(p).strip().upper() == "TODO":
+                    continue
+                f = code_file(o, root, p)
+                if f is None:
                     out.append(f"code: {kind} {sec['id']} lists {p}, not found under the project root or code_roots "
                                "(add its repository to code_roots, or write TODO)")
+                    continue
+                for s in c.get("symbols") or []:
+                    if not _symbol_found(f, str(s)):
+                        out.append(f"code: {kind} {sec['id']} {p}: symbol {s!r} not found in the file")
     return out
 
 
