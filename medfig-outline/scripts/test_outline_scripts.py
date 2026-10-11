@@ -50,7 +50,8 @@ def _outline(**over):
         "methods": [{"id": "2.1", "title": "Cohorts and evaluation", "short": "Cohorts",
                      "focus": [{"topic": "研究设计", "points": ["多中心回顾性研究；三分类（内部代号 E2）", "说明外部队列不参与训练"]}],
                      "items": [{"ref": "T1", "what": "各队列规模与角色"}, {"ref": "Fig1", "what": "研究设计与数据流"}],
-                     "code": [{"path": "src/splits.py", "role": "计算", "guess": True}]}],
+                     "code": [{"path": "src/splits.py", "role": "计算", "guess": True},
+                              {"path": "src/eval.py", "role": "计算", "guess": True}]}],
         "design_assets": ["T1", "Fig1"], "pending": ["Fig1"],
         "results": [
             {"id": "3.1", "title": "Cohorts separate in the backbone representation", "subtitle": "队列在骨干表示中分开",
@@ -58,12 +59,12 @@ def _outline(**over):
              "paragraphs": [{"label": "第一段", "claim": "骨干层面队列可区分",
                              "points": ["域可辨识性 AUC 约 0.983，n = 13,859", "说明 PCA 只在内部拟合"], "cites": ["Fig2a-b", "T1"]}],
              "items": [{"ref": "Fig2", "what": "外部队列在骨干表示中各自成簇"}], "boundaries": ["不写设备因果"],
-             "code": [{"path": "src/eval.py", "role": "计算", "guess": True}]},
+             "methods": ["2.1"]},
             {"id": "3.2", "title": "Edema recall is high internally", "subtitle": "内部 Edema 召回率高",
              "short": "Internal", "paragraphs": [{"label": "第一段", "claim": "召回高",
                                                    "points": ["Edema 召回率 92.7%；内部 BACC 约 0.96", "说明主要错误方向"],
                                                    "cites": ["Fig3a", "T1"]}],
-             "items": [{"ref": "Fig3a", "what": "三类召回都高"}], "code": []}],
+             "items": [{"ref": "Fig3a", "what": "三类召回都高"}], "methods": ["2.1"]}],
         "numbers": [{"text": "0.983", "source": "fig2.source.json:values.auc.all"},
                     {"text": "13,859", "source": "fig2.source.json:values.n"},
                     {"text": "92.7%", "source": "fig3.source.json:values.recall.Edema"},
@@ -146,8 +147,8 @@ def test_build_docx_md_and_folders(proj, tmp_path):
     d = docx.Document(res["docx"])
     text = "\n".join(p.text for p in d.paragraphs)
     for s in ("2.1 Cohorts and evaluation", "3.1 Cohorts separate in the backbone representation",
-              "（队列在骨干表示中分开）", "写作重点", "写作要点", "第一段", "图 / 表", "相关代码", "措辞边界",
-              "src/eval.py（推测）"):
+              "（队列在骨干表示中分开）", "写作重点", "写作要点", "第一段", "图 / 表", "关联代码", "措辞边界",
+              "src/eval.py（推测）", "方法：见 2.1"):
         assert s in text, s
     md = Path(res["md"]).read_text(encoding="utf-8")
     assert "## 3.1 Cohorts separate" in md
@@ -155,10 +156,10 @@ def test_build_docx_md_and_folders(proj, tmp_path):
     assert (r31 / "figures/fig2.pdf").is_file() and (r31 / "figures/fig2.source.json").is_file()
     assert (r31 / "tables/T1.csv").is_file() and (r31 / "tables/T1.md").is_file()
     assert (r31 / "captions/fig2.md").is_file()
-    assert not (r31 / "code/fig2.py").exists()  # plotting scripts are not part of the method
-    assert (r31 / "code/eval.py").read_text(encoding="utf-8") == "# eval.py"  # source file, guess or not
-    assert not (r31 / "code/code.md").exists()  # the path list lives in the outline, not in the folder
-    assert (out / "2_Methods/2.1_Cohorts/code/splits.py").is_file()
+    assert not (r31 / "code").exists()  # Results narrate figures and tables; their code lives in Methods
+    m21 = out / "2_Methods/2.1_Cohorts/code"
+    assert (m21 / "eval.py").read_text(encoding="utf-8") == "# eval.py"  # source file, guess or not
+    assert sorted(p.name for p in m21.iterdir()) == ["eval.py", "splits.py"]  # no code.md, nothing unnamed
     assert (out / "2_Methods/2.1_Cohorts/tables/T1.csv").is_file()
     cap3 = (out / "3_Results/3.2_Internal/captions/fig3.md").read_text(encoding="utf-8")
     assert "图 3" in cap3  # caption section extracted from the combined captions file
@@ -167,8 +168,8 @@ def test_build_docx_md_and_folders(proj, tmp_path):
 
 def test_code_paths_must_exist_and_code_roots_resolve(proj, tmp_path):
     o = _outline()
-    o["results"][0]["code"].append({"path": "repo/tools/run.py", "role": "计算", "guess": True})
-    o["results"][1]["code"].append({"path": "TODO", "role": "计算"})
+    o["methods"][0]["code"].append({"path": "repo/tools/run.py", "role": "计算", "guess": True})
+    o["methods"][0]["code"].append({"path": "TODO", "role": "计算"})
     out = outline_check.check(_write(tmp_path, o), proj)
     assert out == [i for i in out if "repo/tools/run.py" in i and "code_roots" in i] and len(out) == 1
     upstream = tmp_path / "upstream"
@@ -178,17 +179,17 @@ def test_code_paths_must_exist_and_code_roots_resolve(proj, tmp_path):
     assert outline_check.check(_write(tmp_path, o), proj) == []
     out_dir = tmp_path / "outline_out"
     outline_build.build(_write(tmp_path, o), proj, out_dir)
-    assert (out_dir / "3_Results/3.1_Domain_shift/code/run.py").read_text(encoding="utf-8") == "# run"
+    assert (out_dir / "2_Methods/2.1_Cohorts/code/run.py").read_text(encoding="utf-8") == "# run"
 
 
 def test_same_name_code_files_keep_their_paths(proj, tmp_path):
     (proj / "src/a").mkdir()
     (proj / "src/a/eval.py").write_text("# a/eval.py", encoding="utf-8")
     o = _outline()
-    o["results"][0]["code"].append({"path": "src/a/eval.py", "role": "计算"})
+    o["methods"][0]["code"].append({"path": "src/a/eval.py", "role": "计算"})
     out_dir = tmp_path / "outline_out"
     outline_build.build(_write(tmp_path, o), proj, out_dir)
-    code = out_dir / "3_Results/3.1_Domain_shift/code"
+    code = out_dir / "2_Methods/2.1_Cohorts/code"
     assert (code / "src/eval.py").read_text(encoding="utf-8") == "# eval.py"
     assert (code / "src/a/eval.py").read_text(encoding="utf-8") == "# a/eval.py"
     assert not (code / "eval.py").exists()
@@ -214,21 +215,12 @@ def _upstream(tmp_path):
     return up
 
 
-def test_direct_deps_one_level(proj, tmp_path):
-    o = {"code_roots": [str(_upstream(tmp_path))]}
-    deps = outline_check.direct_deps(o, proj, "repo/src/pkg/models/model.py")
-    assert sorted(deps) == ["repo/src/pkg/constants.py", "repo/src/pkg/models/head.py", "repo/src/pkg/models/util.py"]
-    # a script outside the package resolves through repo/src; one level only (not model.py's imports)
-    assert outline_check.direct_deps(o, proj, "repo/tools/run.py") == ["repo/src/pkg/models/model.py"]
-    assert outline_check.direct_deps(o, proj, "repo/configs/base.yaml") == []
-
-
 def test_symbols_must_exist(proj, tmp_path):
     o = _outline(code_roots=[str(_upstream(tmp_path))])
     o["methods"][0]["code"] = [
         {"path": "repo/src/pkg/models/model.py", "role": "计算", "symbols": ["Model", "Model.forward"]},
         {"path": "repo/src/pkg/models/head.py", "role": "计算", "symbols": ["fit_head", "W"]},
-        {"path": "repo/configs/base.yaml", "role": "配置", "symbols": ["concepts.residual_dim"]}]
+        {"path": "repo/configs/base.yaml", "role": "配置", "symbols": ["concepts.residual_dim"], "copy": "full"}]
     assert outline_check.check(_write(tmp_path, o), proj) == []
     o["methods"][0]["code"][0]["symbols"] = ["Model.backward", "fit_model"]
     o["methods"][0]["code"][2]["symbols"] = ["concepts.dim"]
@@ -236,19 +228,100 @@ def test_symbols_must_exist(proj, tmp_path):
     assert len(out) == 3 and all("symbol" in i and "not found" in i for i in out)
 
 
-def test_build_copies_direct_deps_and_renders_symbols(proj, tmp_path):
-    o = _outline(code_roots=[str(_upstream(tmp_path))])
+def test_build_copies_only_named_files_and_copy_modes(proj, tmp_path):
+    up = _upstream(tmp_path)
+    (up / "repo/results").mkdir()
+    (up / "repo/results/summary.json").write_text(json.dumps({"keep": {"a": 1, "b": 2}, "drop": [0] * 50}),
+                                                  encoding="utf-8")
+    (up / "repo/results/ledger.jsonl").write_text(
+        "\n".join(json.dumps({"key": k, "est": i}) for i, k in enumerate(["cov", "size", "other"])), encoding="utf-8")
+    (up / "repo/results/pairs.parquet").write_bytes(b"PAR1" * 100)
+    o = _outline(code_roots=[str(up)])
     o["methods"][0]["code"] = [
         {"path": "repo/src/pkg/models/model.py", "role": "计算", "symbols": ["Model.forward"], "note": "线性决策头"},
-        {"path": "repo/configs/base.yaml", "role": "配置", "symbols": ["concepts.residual_dim"]}]
+        {"path": "repo/configs/base.yaml", "role": "配置", "symbols": ["concepts.residual_dim"], "copy": "full"},
+        {"path": "repo/results/summary.json", "role": "回执", "symbols": ["keep.a"], "copy": "excerpt"},
+        {"path": "repo/results/ledger.jsonl", "role": "回执", "symbols": ["cov", "size"], "copy": "excerpt"},
+        {"path": "repo/results/pairs.parquet", "role": "回执", "note": "38270 对", "copy": "path"}]
+    assert outline_check.check(_write(tmp_path, o), proj) == []
     out_dir = tmp_path / "outline_out"
     res = outline_build.build(_write(tmp_path, o), proj, out_dir)
     code = out_dir / "2_Methods/2.1_Cohorts/code"
-    assert sorted(p.name for p in code.iterdir()) == ["base.yaml", "constants.py", "head.py", "model.py", "util.py"]
+    # model.py imports head / util / constants, but only the files the outline names are copied
+    assert sorted(p.name for p in code.iterdir()) == ["base.yaml", "ledger.excerpt.jsonl", "model.py",
+                                                      "summary.excerpt.json"]
+    ex = json.loads((code / "summary.excerpt.json").read_text(encoding="utf-8"))
+    assert ex == {"_excerpt_of": "repo/results/summary.json", "keep": {"a": 1}}
+    rows = [json.loads(x) for x in (code / "ledger.excerpt.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [r.get("key") for r in rows[1:]] == ["cov", "size"]
     md = Path(res["md"]).read_text(encoding="utf-8")
     assert "计算：`repo/src/pkg/models/model.py` · `Model.forward` —— 线性决策头" in md
-    assert "配置：`repo/configs/base.yaml` · `concepts.residual_dim`" in md
-    assert "依赖（直接调用，已拷入 code/）：`repo/src/pkg/models/head.py`" in md
+    assert "`repo/results/summary.json` · `keep.a`（摘录）" in md
+    assert "`repo/results/pairs.parquet` —— 38270 对（只列路径，未拷贝）" in md
+    assert "依赖" not in md
+
+
+def test_copy_mode_and_results_gates(proj, tmp_path):
+    up = _upstream(tmp_path)
+    o = _outline(code_roots=[str(up)])
+    o["methods"][0]["code"] = [
+        {"path": "repo/configs/base.yaml", "role": "配置", "symbols": ["concepts.residual_dim"]},
+        {"path": "repo/src/pkg/constants.py", "role": "回执", "symbols": ["N"], "copy": "excerpt"}]
+    o["results"][0]["code"] = [{"path": "src/eval.py", "role": "计算"}]
+    o["results"][0]["methods"] = []
+    o["results"][1]["methods"] = ["2.9"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("base.yaml" in i and "set copy" in i for i in out)
+    assert any("constants.py" in i and "excerpt needs" in i for i in out)
+    assert any("Results 3.1 lists code" in i for i in out)
+    assert any("Results 3.1 names no Methods section" in i for i in out)
+    assert any("Methods 2.9, which does not exist" in i for i in out)
+
+
+def test_in_figure_computation_role(proj, tmp_path):
+    o = _outline()
+    o["methods"][0]["code"].append({"path": "figures/main/fig2.py", "role": "图内计算"})
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("图内计算" in i and "name the function" in i for i in out)
+    (proj / "figures/main/fig2.py").write_text("def pca(rows):\n    pass\n", encoding="utf-8")
+    o["methods"][0]["code"][-1]["symbols"] = ["pca"]
+    assert outline_check.check(_write(tmp_path, o), proj) == []
+
+
+def test_repeated_receipt_merges_excerpt_keys(proj, tmp_path):
+    receipt = proj / 'summary.json'
+    receipt.write_text(json.dumps({'a': 1, 'b': 2, 'unused': 3}), encoding='utf-8')
+    o = _outline()
+    o['methods'][0]['code'] = [
+        {'path': 'summary.json', 'role': '回执', 'copy': 'excerpt', 'symbols': [key]}
+        for key in ('a', 'b')]
+    res = outline_build.build(_write(tmp_path, o), proj, tmp_path / 'out')
+    files = list((Path(res['out']) / '2_Methods/2.1_Cohorts/code').rglob('*.json'))
+    assert len(files) == 1
+    data = json.loads(files[0].read_text(encoding='utf-8'))
+    assert data['a'] == 1 and data['b'] == 2 and 'unused' not in data
+
+
+def test_absolute_same_name_sources_stay_in_archive(proj, tmp_path):
+    sources = []
+    for folder in ('first', 'second'):
+        f = tmp_path / folder / 'same.py'
+        f.parent.mkdir()
+        f.write_text(folder, encoding='utf-8')
+        sources.append(f)
+    o = _outline(code_roots=[str(tmp_path)])
+    o['methods'][0]['code'] = [{'path': str(f), 'role': '计算'} for f in sources]
+    res = outline_build.build(_write(tmp_path, o), proj, tmp_path / 'out')
+    code = Path(res['out']) / '2_Methods/2.1_Cohorts/code'
+    assert {f.read_text(encoding='utf-8') for f in code.rglob('same.py')} == {'first', 'second'}
+    assert all(f.read_text(encoding='utf-8') == folder for f, folder in zip(sources, ('first', 'second')))
+
+
+def test_jsonl_excerpt_requires_exact_record_key(proj, tmp_path):
+    (proj / 'ledger.jsonl').write_text(json.dumps({'key': 'real', 'note': 'absent'}), encoding='utf-8')
+    o = _outline()
+    o['methods'][0]['code'] = [{'path': 'ledger.jsonl', 'role': '回执', 'copy': 'excerpt', 'symbols': ['absent']}]
+    assert any('symbol' in issue and 'not found' in issue for issue in outline_check.check(_write(tmp_path, o), proj))
 
 
 def test_build_refuses_output_inside_project(proj, tmp_path):
@@ -303,7 +376,8 @@ def test_build_puts_citation_on_the_paragraph_line(proj, tmp_path):
     text = [p.text for p in docx.Document(res["docx"]).paragraphs]
     assert "第一段：骨干层面队列可区分（Fig 2a-b、Table 1）" in text
     assert not any(t.startswith("引用：") for t in text)
-    assert "计算：src/eval.py（推测）" in text and not any("绘图" in t for t in text)
+    assert any("src/eval.py（推测）" in t and t.startswith("计算：") for t in text)
+    assert not any("绘图" in t for t in text)
     assert "Fig 1（外部绘制，待交付）：研究设计与数据流" in text
 
 
@@ -324,8 +398,10 @@ def _nested():
     r = o["results"][0]
     r["subsections"] = [
         {"id": "3.1.1", "title": "Cohort composition", "short": "Cohorts", "subtitle": "队列构成",
+         "methods": ["2.1.1"],
          "paragraphs": [{"label": "第一段", "claim": "构成不同", "points": ["点出构成差异", "说明两类队列"], "cites": ["T1"]}]},
         {"id": "3.1.2", "title": "Representation", "short": "Repr", "subtitle": "表示",
+         "methods": ["2.1.2"],
          "paragraphs": [{"label": "第一段", "claim": "可分", "points": ["说明 PCA", "对比空间"], "cites": ["Fig2a"]}]}]
     return o
 
@@ -448,12 +524,12 @@ def test_items_say_what_and_code_has_no_plot_scripts(proj, tmp_path):
     o = _outline()
     o["results"][1]["items"] = []
     o["results"][0]["items"] = [{"ref": "Fig2", "what": "由 fig2.py 绘制"}, {"ref": "Fig3", "what": "x"}]
-    o["results"][0]["code"].append({"path": "figures/main/fig2.py", "role": "绘图"})
+    o["methods"][0]["code"].append({"path": "figures/main/fig2.py", "role": "绘图"})
     o["methods"][0]["code"].append({"path": "tables/build_tables.py", "role": "表格"})
     out = _issues(proj, tmp_path, o)
     assert any("Results 3.1 Fig2: say what it shows scientifically" in i for i in out)
     assert any("Results 3.1 lists Fig 3 but its paragraphs do not cite it" in i for i in out)
-    assert any("code: Results 3.1 lists figures/main/fig2.py" in i for i in out)
+    assert any("code: Methods 2.1 lists figures/main/fig2.py" in i for i in out)
     assert any("code: Methods 2.1 lists tables/build_tables.py" in i for i in out)
 
 

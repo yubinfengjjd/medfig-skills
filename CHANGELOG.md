@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.4 (2026-10-11)
+
+`medfig-outline` 面向写作证据的归档：
+
+- Results 不列代码，使用 `methods` 显式指向对应方法节；计算链归入 Methods。
+- Methods 只拷大纲点名文件，不再自动收集 import 依赖。
+- 配置与回执明确设 `copy: full / excerpt / path`；摘录 JSON/YAML 点名键或 JSONL 中 `key` 精确匹配的行，同来源的多个摘录条目合并所需键。
+- 图脚本本身实现分析时可列 `图内计算`，必须点名计算函数。
+- 新检查覆盖 Results 方法指向与归档方式；同名绝对路径来源安全归档到小节目录。
+
 ## 0.6.3 (2026-10-11)
 
 `medfig-outline` 叙事与代码闭环：

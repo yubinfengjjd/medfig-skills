@@ -39,6 +39,9 @@ REF = re.compile(r"^(Fig|S)(\d+)([a-z](?:-[a-z])?)?$|^(T\d+|ST\d+)$")
 TEXT_REF = re.compile(r"(?:Fig\.?|Figure|图)\s?(S?)(\d+)([a-z](?:[–-][a-z])?)?(?![\w])|(?:Table|表)\s?(S?)(\d+)(?!\d)")
 DRAW_ROLES = {"绘图", "表格"}
 DRAW_PATH = re.compile(r"^(?:figures|tables)/")
+IN_FIGURE_ROLE = "图内计算"   # a plotting script that itself computes an analysis (PCA, curves); symbols required
+COPY_MODES = ("full", "excerpt", "path")   # 配置 / 回执: copy whole, copy only the named keys, or cite the path
+EXCERPT_SUFFIXES = (".json", ".jsonl", ".yaml", ".yml")
 CODE_NOTE = re.compile(r"（内部代号[^）]*）")
 VAGUE_TITLE = re.compile(r"^(?:results? of|overview of|analysis of|performance of|.* results?)\b", re.I)
 
@@ -331,9 +334,14 @@ def _items_and_code(o, first):
                     out.append(f"items: {kind} {sec['id']} {it.get('ref')}: say what it shows scientifically, "
                                "not how it was drawn")
             for c in sec.get("code", []):
-                if c.get("role") in DRAW_ROLES or DRAW_PATH.match(str(c.get("path", ""))):
+                drawn = c.get("role") in DRAW_ROLES or DRAW_PATH.match(str(c.get("path", "")))
+                if drawn and c.get("role") != IN_FIGURE_ROLE:
                     out.append(f"code: {kind} {sec['id']} lists {c.get('path')} ({c.get('role')}); plotting / "
-                               "table scripts are not part of the method -- cite the figure / table instead")
+                               "table scripts are not part of the method -- cite the figure / table instead "
+                               f"(role {IN_FIGURE_ROLE} only when the script itself computes an analysis)")
+                if c.get("role") == IN_FIGURE_ROLE and not c.get("symbols"):
+                    out.append(f"code: {kind} {sec['id']} {c.get('path')} ({IN_FIGURE_ROLE}): name the function that "
+                               "computes the analysis in symbols")
     for asset, (sid, kind) in first.items():
         if asset not in listed:
             out.append(f"items: {_pretty(asset)} has no 图 / 表 line; add one in {kind} {sid} (first citation) "
@@ -357,72 +365,6 @@ def _code_hit(o, root, path):
         if f.is_file():
             return base, f
     return None
-
-
-def _module_file(top, name):
-    p = top / Path(*name.split("."))
-    for c in (p.with_suffix(".py"), p / "__init__.py"):
-        if c.is_file():
-            return c
-    return None
-
-
-def _package_dir(f, base):
-    """Directory that holds the top-level package of ``f`` (walks up while ``__init__.py`` exists)."""
-    d = f.parent
-    while (d / "__init__.py").is_file() and d.parent != d and base in d.parents:
-        d = d.parent
-    return d
-
-
-def direct_deps(o, root, path):
-    """Project files a code entry imports directly (one level, not transitive), as paths relative to the base
-    (project root or ``code_roots`` entry) they were found under. Imports resolve against the entry's own package,
-    the ``src/`` folders above it, and ``<base>/<repo>/src`` of every code root (scripts that put another
-    repository on ``sys.path``); stdlib and third-party imports are ignored, and so are empty ``__init__.py``."""
-    hit = _code_hit(o, root, path)
-    if not hit or hit[1].suffix != ".py":
-        return []
-    base, f = hit
-    tops = [(_package_dir(f, base), base)]
-    for a in f.parents:
-        if a == base.parent:
-            break
-        if (a / "src").is_dir():
-            tops.append((a / "src", base))
-    for b in [Path(root), *(Path(root) / r for r in o.get("code_roots") or [])]:
-        if b.is_dir():
-            tops += [(c / "src", b) for c in sorted(b.iterdir()) if (c / "src").is_dir()]
-    pkg = list(f.relative_to(tops[0][0]).with_suffix("").parts[:-1])
-    names = []
-    try:
-        tree = ast.parse(f.read_text(encoding="utf-8"))
-    except (SyntaxError, UnicodeDecodeError):
-        return []
-    for n in ast.walk(tree):
-        if isinstance(n, ast.Import):
-            names += [a.name for a in n.names]
-        elif isinstance(n, ast.ImportFrom):
-            mod = n.module or ""
-            if n.level:
-                mod = ".".join(pkg[: len(pkg) - n.level + 1] + ([mod] if mod else []))
-            # "from pkg import mod" may name a submodule: prefer it over the package __init__
-            names += [f"{mod}.{a.name}" if mod else a.name for a in n.names] + [mod]
-    out = []
-    for name in names:
-        for top, b in tops:
-            m = _module_file(top, name) if name else None
-            if m is None or m == f or b not in m.parents:
-                continue
-            if m.name == "__init__.py" and not m.read_text(encoding="utf-8").strip():
-                break
-            out.append((m, b))
-            break
-    files = list(dict.fromkeys(out))
-    # "from pkg import mod" yields both pkg/__init__.py and pkg/mod.py; the submodule is the real dependency
-    pkgs = {m.parent for m, _ in files if m.name != "__init__.py"}
-    files = [(m, b) for m, b in files if not (m.name == "__init__.py" and m.parent in pkgs)]
-    return [m.relative_to(b).as_posix() for m, b in files]
 
 
 def _symbol_found(f, sym):
@@ -452,27 +394,62 @@ def _symbol_found(f, sym):
                 return False
             data = data[k]
         return True
+    if f.suffix == ".jsonl":
+        return any(r.get("key") == sym for r in _jsonl(f))
     return sym in text
 
 
-def _code_found(o, root):
-    """Every listed code path must exist (its source file is copied into the section folder); unknown code is TODO.
-    Every listed symbol must exist in its file, so the outline never points at a function that is not there."""
+def _jsonl(f):
     out = []
-    for kind, secs in (("Methods", o.get("methods", [])), ("Results", o.get("results", []))):
-        for sec in _nodes(secs):
-            for c in sec.get("code", []):
-                p = c.get("path")
-                if not p or str(p).strip().upper() == "TODO":
-                    continue
-                f = code_file(o, root, p)
-                if f is None:
-                    out.append(f"code: {kind} {sec['id']} lists {p}, not found under the project root or code_roots "
-                               "(add its repository to code_roots, or write TODO)")
-                    continue
-                for s in c.get("symbols") or []:
-                    if not _symbol_found(f, str(s)):
-                        out.append(f"code: {kind} {sec['id']} {p}: symbol {s!r} not found in the file")
+    for line in f.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            r = json.loads(line) if line.strip() else None
+        except ValueError:
+            r = None
+        if isinstance(r, dict):
+            out.append(r)
+    return out
+
+
+def _code_found(o, root):
+    """Methods ``code``: every path exists, every symbol exists in its file, every 配置 / 回执 says how it is
+    archived (``copy``: full / excerpt / path; excerpt needs named keys in a json / jsonl / yaml file).
+    Results carry no code: each section names the Methods sections that produced its results in ``methods``."""
+    out = []
+    methods = {s["id"] for s in _nodes(o.get("methods", []))}
+    for sec in _nodes(o.get("methods", [])):
+        for c in sec.get("code", []):
+            p = c.get("path")
+            if not p or str(p).strip().upper() == "TODO":
+                continue
+            f = code_file(o, root, p)
+            if f is None:
+                out.append(f"code: Methods {sec['id']} lists {p}, not found under the project root or code_roots "
+                           "(add its repository to code_roots, or write TODO)")
+                continue
+            for s in c.get("symbols") or []:
+                if not _symbol_found(f, str(s)):
+                    out.append(f"code: Methods {sec['id']} {p}: symbol {s!r} not found in the file")
+            if c.get("role") in ("配置", "回执"):
+                mode = c.get("copy")
+                if mode not in COPY_MODES:
+                    out.append(f"code: Methods {sec['id']} {p} ({c.get('role')}): set copy to one of "
+                               f"{'/'.join(COPY_MODES)} (full = 写作要用的设置或数，excerpt = 只摘点名的键，"
+                               "path = 只写路径)")
+                elif mode == "excerpt" and (f.suffix not in EXCERPT_SUFFIXES or not c.get("symbols")):
+                    out.append(f"code: Methods {sec['id']} {p}: copy excerpt needs a json / jsonl / yaml file "
+                               "and the keys to keep in symbols")
+    for sec in _nodes(o.get("results", [])):
+        if sec.get("code"):
+            out.append(f"code: Results {sec['id']} lists code; Results narrate figures and tables -- move the code "
+                       "to the Methods section that describes the analysis and name it in methods")
+        is_leaf = not sec.get("subsections")
+        refs = sec.get("methods") or []
+        if is_leaf and (sec.get("paragraphs") or sec.get("items")) and not refs:
+            out.append(f"methods: Results {sec['id']} names no Methods section (methods: [2.x.x, ...])")
+        for m in refs:
+            if str(m) not in methods:
+                out.append(f"methods: Results {sec['id']} points to Methods {m}, which does not exist")
     return out
 
 

@@ -26,18 +26,20 @@ methods:
     allow_numbers: ["0–4", "512"]                # 可选：focus 里允许出现的非结果数字
     items:                                       # 本节引用的设计资产（只能是 design_assets）
       - {ref: T1, what: 各队列的角色、设备与规模}
-    code:                                        # 只列分析代码（计算）、配置、运行回执；绘图 / 表格脚本不列
+    code:                                        # 仅 Methods：点名的计算 / 图内计算 / 配置 / 回执；不自动收依赖
       - path: <upstream>/src/x.py                # 必须能在项目根或 code_roots 下找到，原文件拷进 code/；找不到写 TODO
-        role: 计算                               # 计算 / 配置 / 回执
+        role: 计算                               # 计算 / 图内计算 / 配置 / 回执
         symbols: [DecisionLayer.forward]         # 实现该要点的函数 / 类 / Class.method；yaml / json 写键路径；须真实存在
         note: 线性决策头，残差权重在重拟合时置零    # 一句：支撑哪个要点
         guess: true                              # 推测的上游代码（只影响大纲里的"（推测）"标注，照样拷贝）
       - path: <upstream>/configs/base.yaml
         role: 配置
         symbols: [concepts.residual_dim]
+        copy: full                              # 配置 / 回执必填：full / excerpt / path
       - path: <upstream>/results/checkpoints/final_seed0.refit.json
         role: 回执
         symbols: [C_selection]
+        copy: excerpt                           # 摘录 JSON/YAML 点名键，JSONL 只保留 key 精确匹配的行
 results:
   - id: "3.1"
     title: <一句话发现，英文>
@@ -53,7 +55,7 @@ results:
       - ref: Fig2
         what: 外部队列在骨干表示中各自成簇，域差异在概念层之前就存在
     boundaries: [...]                            # 措辞边界
-    code: [...]                                  # 只列分析代码（计算）
+    methods: ["2.1", "2.4.1"]                    # 显式指向对应 Methods；Results 不列 code，也不拷 code/
 numbers:                                         # Results 里每个数的出处
   - text: "0.983"                                # 大纲里写出的字符串（含 %, 区间两端分别登记）
     source: fig6.source.json:values.b_auc.all.backbone   # 或 table:T2.csv:<列>@<行筛选>
@@ -82,12 +84,13 @@ numbers:                                         # Results 里每个数的出处
 - 不用 Word 标题样式编号；小节标题加粗（Methods 14 pt、Results 14 pt），Results 标题下一行中文副标题（括号，11 pt）。
 - 小标题："写作重点："（Methods）、"写作要点"（Results）、"图 / 表"、"相关代码"、"措辞边界"，加粗。
 - 要点用缩进层级（主题 → 要点 → 子要点），每级左缩进 0.74 cm；段落标签"第一段："单独一行加粗。
-- 代码路径用等宽字体；推测项后缀"（推测）"，缺失项写"TODO"。只列分析代码（计算），不列绘图 / 表格脚本。
+- Methods 代码路径用等宽字体；推测项后缀"（推测）"，缺失项写"TODO"。纯绘图 / 表格编排脚本不列；脚本本身计算分析时列“图内计算”并点名函数。配置 / 回执的 `copy: excerpt` 标“摘录”，`copy: path` 标“只列路径，未拷贝”。
 - "图 / 表"每行 = 资产名 + 它说明什么（`Fig 2：外部队列在骨干表示中各自成簇…`）；外部绘制、还没导出的标"（外部绘制，待交付）"。Methods 的写成"引用图 / 表："。
 - 正文字号 10.5 pt，中文宋体 / 英文 Times New Roman；A4，页边距 2.54 cm。
 - 文件不带宏、不嵌图（图在分节文件夹里）。
 - 段落行：`第一段：` 加粗 + 本段结论 + 括注出处（`（Fig 4a、Table 2）`），要点直接列在下面；不另起"引用："行。
-- 相关代码按 计算 / 配置 / 回执 排；写了 `symbols` / `note` 的条目单独一行（`计算：decision.py · DecisionLayer.forward —— 线性决策头`），其余同角色的并成一行；最后一行"依赖（直接调用，已拷入 code/）"列自动拷入的直接 import 模块。
+- Methods 关联代码按 计算 / 图内计算 / 配置 / 回执 排；写了 `symbols` / `note` 的条目单独一行（`计算：decision.py · DecisionLayer.forward —— 线性决策头`），其余同角色的并成一行。只归档点名文件，不扫描 import、不列自动依赖。相同来源的多条摘录合并全部点名键。
+- Results 写“方法：见 2.x、2.x.x”，不列关联代码。每个有段落或图表说明的末级 Results 节必须写 `methods`；所有 ID 都须存在于 Methods。
 
 ## 5. 写法：提示作者写什么，而不是替作者写
 
