@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.5 (2026-10-11)
+
+`medfig-outline` 审查修复：
+
+- 检查与生成共用同一个 json / yaml / jsonl 读取和键路径函数：文件解析失败时检查直接报错，不再先通过检查、到生成时才崩溃；每个文件只解析一次。
+- 摘录文件名保留源后缀（`report.yaml` → `report.yaml.excerpt.json`），同名的 json 与 yaml 摘录不再冲突。
+- `copy` 只用于 配置 / 回执；分析代码写 `copy: excerpt / path` 会报错（分析代码一律整份拷贝）。
+- Results 的 `methods` ID 必须加引号（`2.10` 不加引号会被读成 2.1）；自带段落的上级 Results 节也必须写 `methods`。
+- docx 里"方法：见 2.x"一行不再与下一段绑定，避免分页留白。
+- 文档：去掉"Results 列代码 / 相关代码"的旧说法。
+
 ## 0.6.4 (2026-10-11)
 
 `medfig-outline` 面向写作证据的归档：

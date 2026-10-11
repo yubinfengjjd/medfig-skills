@@ -324,6 +324,62 @@ def test_jsonl_excerpt_requires_exact_record_key(proj, tmp_path):
     assert any('symbol' in issue and 'not found' in issue for issue in outline_check.check(_write(tmp_path, o), proj))
 
 
+def test_excerpts_of_same_stem_do_not_collide(proj, tmp_path):
+    up = _upstream(tmp_path)
+    (up / "repo/results").mkdir()
+    (up / "repo/results/report.json").write_text(json.dumps({"a": 1}), encoding="utf-8")
+    (up / "repo/results/report.yaml").write_text("b: 2\n", encoding="utf-8")
+    o = _outline(code_roots=[str(up)])
+    o["methods"][0]["code"] = [
+        {"path": "repo/results/report.json", "role": "回执", "symbols": ["a"], "copy": "excerpt"},
+        {"path": "repo/results/report.yaml", "role": "回执", "symbols": ["b"], "copy": "excerpt"}]
+    out_dir = tmp_path / "outline_out"
+    outline_build.build(_write(tmp_path, o), proj, out_dir)
+    code = out_dir / "2_Methods/2.1_Cohorts/code"
+    assert json.loads((code / "report.excerpt.json").read_text(encoding="utf-8"))["a"] == 1
+    assert json.loads((code / "report.yaml.excerpt.json").read_text(encoding="utf-8"))["b"] == 2
+
+
+def test_unparsable_receipt_fails_the_check_not_the_build(proj, tmp_path):
+    up = _upstream(tmp_path)
+    (up / "repo/results").mkdir()
+    (up / "repo/results/broken.json").write_text('{"keep": 1,', encoding="utf-8")
+    o = _outline(code_roots=[str(up)])
+    o["methods"][0]["code"] = [{"path": "repo/results/broken.json", "role": "回执", "symbols": ["keep"],
+                                "copy": "excerpt"}]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("broken.json does not parse" in i for i in out)
+    with pytest.raises(RuntimeError, match="does not parse"):
+        outline_build.build(_write(tmp_path, o), proj, tmp_path / "outline_out")
+
+
+def test_copy_mode_only_for_config_and_receipts(proj, tmp_path):
+    o = _outline()
+    o["methods"][0]["code"][0]["copy"] = "excerpt"
+    o["methods"][0]["code"][1]["copy"] = "path"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert sum("applies only to 配置 / 回执" in i for i in out) == 2
+    o["methods"][0]["code"][0]["copy"] = "full"
+    del o["methods"][0]["code"][1]["copy"]
+    assert outline_check.check(_write(tmp_path, o), proj) == []
+
+
+def test_methods_ids_quoted_and_parent_sections_linked(proj, tmp_path):
+    o = _outline()
+    o["results"][0]["methods"] = [2.1]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("must be quoted" in i for i in out)
+    # a parent section with its own paragraphs still needs a Methods link
+    o = _outline()
+    parent = o["results"][0]
+    parent["subsections"] = [dict(o["results"][1], id="3.1.1", title="Edema recall is high",
+                                  subtitle="召回高", short="Sub")]
+    o["results"] = [parent]
+    del parent["methods"]
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("Results 3.1 names no Methods section" in i for i in out)
+
+
 def test_build_refuses_output_inside_project(proj, tmp_path):
     with pytest.raises(ValueError, match="outside the project"):
         outline_build.build(_write(tmp_path, _outline()), proj, proj / "outline")

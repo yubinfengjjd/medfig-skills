@@ -235,7 +235,8 @@ def to_docx(o, path):
                 for i in _items(sec):
                     para(_item_line(i, pending), level=1)
             if sec.get("methods"):
-                para(_methods_line(sec), bold=True)
+                # a one-line pointer, not a heading: bold but not kept with the next block
+                para(_methods_line(sec), bold=True).paragraph_format.keep_with_next = False
             if sec.get("boundaries"):
                 para("措辞边界", bold=True)
                 for t in sec["boundaries"]:
@@ -345,31 +346,33 @@ def _archive_relative(path, f, root, o):
 
 
 def _excerpt_name(f):
-    return f"{f.stem}.excerpt{'.jsonl' if f.suffix == '.jsonl' else '.json'}"
+    """report.json -> report.excerpt.json, report.yaml -> report.yaml.excerpt.json: the source suffix stays in the
+    name so excerpts of report.json and report.yaml in one folder never collide."""
+    if f.suffix == ".jsonl":
+        return f"{f.stem}.excerpt.jsonl"
+    return f"{f.stem}.excerpt.json" if f.suffix == ".json" else f"{f.name}.excerpt.json"
 
 
 def _excerpt(f, keys, rel):
     """The named keys of a json / yaml file (dotted paths kept nested), or the jsonl records whose ``key`` is named,
-    with the source path on top so the excerpt can be traced back."""
+    with the source path on top so the excerpt can be traced back. Loading and key paths are outline_check's, so a
+    file that passed the check is read the same way here."""
     import json
+    data = outline_check.load_structured(f)
     if f.suffix == ".jsonl":
-        rows = [r for r in outline_check._jsonl(f) if r.get("key") in set(keys)]
+        rows = [r for r in data if r.get("key") in set(keys)]
         head = json.dumps({"_excerpt_of": rel, "_keys": list(keys)}, ensure_ascii=False)
         return "\n".join([head] + [json.dumps(r, ensure_ascii=False) for r in rows]) + "\n"
-    text = f.read_text(encoding="utf-8")
-    data = json.loads(text) if f.suffix == ".json" else yaml.safe_load(text)
     out = {"_excerpt_of": rel}
     for k in keys:
-        src, dst = data, out
-        parts = str(k).split(".")
-        for i, part in enumerate(parts):
-            if not isinstance(src, dict) or part not in src:
-                break
-            src = src[part]
-            if i == len(parts) - 1:
-                dst[part] = src
-            else:
-                dst = dst.setdefault(part, {})
+        found, value = outline_check.dotted(data, k)
+        if not found:
+            continue
+        dst = out
+        *heads, last = str(k).split(".")
+        for part in heads:
+            dst = dst.setdefault(part, {})
+        dst[last] = value
     return json.dumps(out, ensure_ascii=False, indent=2, default=str) + "\n"
 
 

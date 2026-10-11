@@ -367,36 +367,63 @@ def _code_hit(o, root, path):
     return None
 
 
-def _symbol_found(f, sym):
-    """A function / class / Class.method in a .py file, a dotted key path in yaml / json, or literal text."""
+def load_structured(f):
+    """Parsed json / yaml content, the list of jsonl records, or None (other suffix). Raises ValueError when a
+    json / yaml file does not parse, so check and build treat a broken receipt the same way."""
+    text = f.read_text(encoding="utf-8", errors="replace")
+    if f.suffix == ".jsonl":
+        return _jsonl(f)
+    if f.suffix not in (".yaml", ".yml", ".json"):
+        return None
+    try:
+        return json.loads(text) if f.suffix == ".json" else yaml.safe_load(text)
+    except (ValueError, yaml.YAMLError) as e:
+        raise ValueError(f"{f.name} does not parse: {e}") from None
+
+
+def dotted(data, path):
+    """(found, value) for a dotted key path into nested dicts."""
+    for k in str(path).split("."):
+        if not isinstance(data, dict) or k not in data:
+            return False, None
+        data = data[k]
+    return True, data
+
+
+def _symbols_missing(f, syms):
+    """Symbols not present in ``f`` (file parsed once): function / class / Class.method / module constant in .py,
+    dotted key path in json / yaml, record ``key`` in jsonl, literal text otherwise."""
+    syms = [str(s) for s in syms]
+    if not syms:
+        return []
+    if f.suffix in (".yaml", ".yml", ".json", ".jsonl"):
+        data = load_structured(f)   # ValueError propagates: reported as an issue by the caller
+        if f.suffix == ".jsonl":
+            keys = {r.get("key") for r in data}
+            return [s for s in syms if s not in keys]
+        return [s for s in syms if not dotted(data, s)[0]]
     text = f.read_text(encoding="utf-8", errors="replace")
     if f.suffix == ".py":
         try:
             tree = ast.parse(text)
         except SyntaxError:
-            return sym in text
+            return [s for s in syms if s not in text]
         top = {n.name: n for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
         assigned = {t.id for n in tree.body if isinstance(n, (ast.Assign, ast.AnnAssign))
                     for t in (n.targets if isinstance(n, ast.Assign) else [n.target]) if isinstance(t, ast.Name)}
-        head, _, rest = sym.partition(".")
-        if not rest:
-            return head in top or head in assigned
-        node = top.get(head)
-        return isinstance(node, ast.ClassDef) and any(
-            getattr(b, "name", None) == rest for b in node.body)
-    if f.suffix in (".yaml", ".yml", ".json"):
-        try:
-            data = json.loads(text) if f.suffix == ".json" else yaml.safe_load(text)
-        except (ValueError, yaml.YAMLError):
-            return sym in text
-        for k in sym.split("."):
-            if not isinstance(data, dict) or k not in data:
-                return False
-            data = data[k]
-        return True
-    if f.suffix == ".jsonl":
-        return any(r.get("key") == sym for r in _jsonl(f))
-    return sym in text
+
+        def found(sym):
+            head, _, rest = sym.partition(".")
+            if not rest:
+                return head in top or head in assigned
+            node = top.get(head)
+            return isinstance(node, ast.ClassDef) and any(getattr(b, "name", None) == rest for b in node.body)
+        return [s for s in syms if not found(s)]
+    return [s for s in syms if s not in text]
+
+
+def _symbol_found(f, sym):
+    return not _symbols_missing(f, [sym])
 
 
 def _jsonl(f):
@@ -427,11 +454,14 @@ def _code_found(o, root):
                 out.append(f"code: Methods {sec['id']} lists {p}, not found under the project root or code_roots "
                            "(add its repository to code_roots, or write TODO)")
                 continue
-            for s in c.get("symbols") or []:
-                if not _symbol_found(f, str(s)):
-                    out.append(f"code: Methods {sec['id']} {p}: symbol {s!r} not found in the file")
+            try:
+                missing = _symbols_missing(f, c.get("symbols") or [])
+            except ValueError as e:
+                out.append(f"code: Methods {sec['id']} {p}: {e}")
+                missing = []
+            out += [f"code: Methods {sec['id']} {p}: symbol {s!r} not found in the file" for s in missing]
+            mode = c.get("copy")
             if c.get("role") in ("配置", "回执"):
-                mode = c.get("copy")
                 if mode not in COPY_MODES:
                     out.append(f"code: Methods {sec['id']} {p} ({c.get('role')}): set copy to one of "
                                f"{'/'.join(COPY_MODES)} (full = 写作要用的设置或数，excerpt = 只摘点名的键，"
@@ -439,16 +469,21 @@ def _code_found(o, root):
                 elif mode == "excerpt" and (f.suffix not in EXCERPT_SUFFIXES or not c.get("symbols")):
                     out.append(f"code: Methods {sec['id']} {p}: copy excerpt needs a json / jsonl / yaml file "
                                "and the keys to keep in symbols")
+            elif mode not in (None, "full"):
+                # analysis code is always archived whole: an excerpt or a bare path would break the code chain
+                out.append(f"code: Methods {sec['id']} {p} ({c.get('role')}): copy {mode!r} applies only to "
+                           "配置 / 回执; analysis code is copied whole")
     for sec in _nodes(o.get("results", [])):
         if sec.get("code"):
             out.append(f"code: Results {sec['id']} lists code; Results narrate figures and tables -- move the code "
                        "to the Methods section that describes the analysis and name it in methods")
-        is_leaf = not sec.get("subsections")
         refs = sec.get("methods") or []
-        if is_leaf and (sec.get("paragraphs") or sec.get("items")) and not refs:
+        if (sec.get("paragraphs") or sec.get("items")) and not refs:
             out.append(f"methods: Results {sec['id']} names no Methods section (methods: [2.x.x, ...])")
         for m in refs:
-            if str(m) not in methods:
+            if not isinstance(m, str):
+                out.append(f"methods: Results {sec['id']} Methods id {m!r} must be quoted ('2.10' loads as 2.1)")
+            elif m not in methods:
                 out.append(f"methods: Results {sec['id']} points to Methods {m}, which does not exist")
     return out
 
