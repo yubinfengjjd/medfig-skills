@@ -67,6 +67,7 @@ def portable(path, cfg):
 class Provenance:
     def __init__(self, name, cfg=None):
         self.name, self.inputs, self.transforms, self.values = name, [], [], {}
+        self.definitions = {}
         self.cfg = None
         if cfg is not None:
             self.bind(cfg)
@@ -98,10 +99,34 @@ class Provenance:
     def set(self, key, value):
         self.values[key] = value
 
+    def define(self, key, text, source, **fields):
+        """Record what a derived quantity or comparison condition IS, checked against code or receipts.
+
+        text: one-sentence definition; source: where it was verified (e.g. "wave2.py:189-207" or a
+        receipt key). Optional fields: fit_split, eval_split, grouping, scale, analysis. Downstream
+        legend and writing steps read this instead of the free-text caption."""
+        if not isinstance(text, str) or not text.strip():
+            raise ValueError(f"provenance {self.name!r}: define({key!r}) needs text as a non-empty string")
+        if not isinstance(source, str) or not source.strip():
+            # str(None) 会得到 "None"，让未核验的定义看起来有出处（评审 2026-10-14）
+            raise ValueError(f"provenance {self.name!r}: define({key!r}) needs source as a non-empty string "
+                             "(code lines or a receipt key; None / False / 0 / 空列表 不接受)")
+        allowed = {"fit_split", "eval_split", "grouping", "scale", "analysis"}
+        extra = set(fields) - allowed
+        if extra:
+            raise ValueError(f"provenance {self.name!r}: define({key!r}) unknown fields {sorted(extra)}")
+        from . import qa  # 局部导入：单独用 Provenance 时不拉起 matplotlib；定义文本与图注同一套禁用词闸门
+        hits = qa.banned_in_text(text) + qa.dev_history_in_text(text)
+        if hits:
+            raise ValueError(f"provenance {self.name!r}: define({key!r}) text contains banned words {hits}")
+        self.definitions[key] = {"text": text, "source": source, **fields}
+
     def write(self, out_dir):
         out = Path(out_dir) / f"{self.name}.source.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         doc = {"figure": self.name, "root": self.root, "created": time.strftime("%Y-%m-%dT%H:%M:%S"),
                "inputs": self.inputs, "transforms": self.transforms, "values": self.values}
+        if self.definitions:
+            doc["definitions"] = self.definitions
         out.write_text(json.dumps(doc, indent=2, default=_default, ensure_ascii=False), encoding="utf-8")
         return out

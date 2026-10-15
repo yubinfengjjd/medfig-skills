@@ -37,12 +37,13 @@ Python ≥ 3.11 用 `tomllib`，否则需要 `tomli`。
 
 | 名称 | 签名 | 用途 |
 |---|---|---|
-| `Provenance` | `(name, cfg=None)` | 属性 `name, cfg, inputs, transforms, values`；`Reader(prov, cfg)` 会自动 `bind(cfg)` |
+| `Provenance` | `(name, cfg=None)` | 属性 `name, cfg, inputs, transforms, values, definitions`；`Reader(prov, cfg)` 会自动 `bind(cfg)` |
+| `Provenance.define` | `(key, text, source, fit_split=, eval_split=, grouping=, scale=, analysis=)` | 记录派生量 / 比较条件的定义，`source` 必填（代码行或回执键）；写入 `source.json` 的 `definitions`，供图注和写作技能使用 |
 | `bind` | `(cfg)` | 绑定配置，用于把路径写成可移植形式 |
 | `add_input` | `(path, sha256, rows)` | 登记输入（Reader 自动调用）；路径记为相对 `project_root` 的 POSIX 路径，外部白名单文件记为 `external:<目录名>/<relpath>`，project 外的 data_root / out_dir 记为 `data:` / `out:` 前缀；其他绝对路径抛 `ValueError`。source.json 中不出现绝对路径或用户目录 |
 | `add_transform` | `(text)` | 记录一句可被图注引用的处理说明 |
 | `set` | `(key, value)` | 记录图中出现的派生数值（n、AUC、闭合误差、重采样等） |
-| `write` | `(out_dir)` -> `Path` | 写 `<out_dir>/<name>.source.json` = {figure, root, created, inputs, transforms, values}（`root` = project_root 目录名）；numpy / Path / set 自动序列化 |
+| `write` | `(out_dir)` -> `Path` | 写 `<out_dir>/<name>.source.json` = {figure, root, created, inputs, transforms, values}，调用过 `define()` 时另有 `definitions` 键（`root` = project_root 目录名）；numpy / Path / set 自动序列化 |
 
 ## style
 

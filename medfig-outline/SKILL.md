@@ -13,6 +13,15 @@ description: Use when a medical research figure set is finished and the user wan
 - **小节划分与图表归属先在对话里给用户确认**，确认后才写要点、生成 docx 和拷贝文件夹。
 - 只呈现主线版本：早期版本、修复前模型和开发史不进大纲（`medfig-plan/references/mainline_rules.md`）。
 
+## 项目约定（检测到 PROJECT.md 时）
+
+从工作目录或用户给的路径向上查找 `PROJECT.md`（medpaper-pipeline 建立的论文项目）。找到时，用户另行指定的路径优先，否则：
+
+- `--project` 用 `02_figures/`，`--out` 默认用论文项目根下的 `03_outline/`（在 medfig 项目根之外，满足第 5 步要求）。
+- `03_outline/` 已有大纲时，先把旧内容移到 `_archive/<今天日期>/03_outline/`，再生成；同一天第二次替换用 `_archive/<今天日期>_2/`、`_3` 依次顺延，归档只增不改（medpaper-pipeline 项目目录约定第 2 节）。完成后把 `PROJECT.md` 状态表“写作大纲”一行改为 `待确认`。
+
+没有 `PROJECT.md` 时保持下文原有行为，不新建它。
+
 ## 第 1 步：盘点
 
 读规格（版本清单、主线、代号对照表）、每张图的 `source.json`（`values` 里的数、`inputs` 的数据文件、`transforms`）、表格（CSV / md）、图注草稿、图脚本与表格脚本路径；有上游分析仓库时记下它的根目录。只读，不改任何项目文件。
@@ -26,6 +35,7 @@ description: Use when a medical research figure set is finished and the user wan
 - 两边的节数由内容决定，不要求相等；"Methods 与 Results 节数相同且每节恰好一张图"是平铺的信号，检查脚本会报。
 - 只有一个小节就不设小节；每个末级节至少 2 条要点，否则并回上一级。
 - 标题：Results 大节**一句话概括发现**（英文）+ 中文副标题，小节可用短标题；措辞不超出数据，标题不放数字。Methods 标题写方法或步骤名。
+- 结论纪律：规格里的 claim 只是写作意图，不直接用作标题。写每个 Results 标题前，先从 `source.json` 和表格逐队列、逐类别列出相关数值：无例外才写全称结论；有例外就写范围或改写；因果、定位动词（causes、drives、arises at、由……造成、发生在……这一步）不用。核对记录写进 `outline.yaml` 该节的 `title_check`（列出数值与例外），检查脚本会提示缺这一项的节。
 - 从代码 / 配置推断、没有文档依据的训练细节，在要点后标"（待核）"，并在问题清单里列出。
 - 文件夹结构（见第 5 步）：小节文件夹放在大节文件夹里。
 - 不确定项（某图归哪节、某分析是否进大纲、训练步骤细节）列成问题，一次问完；已答过的不再问。
@@ -47,6 +57,7 @@ description: Use when a medical research figure set is finished and the user wan
 - **叙事与代码闭环**：每个方法要点、每个结果都要能追到实现它的代码。`code` 的每条写 `symbols`（实现该要点的函数 / 类 / `Class.method`；配置写键路径如 `concepts.residual_dim`；回执写顶层键）和 `note`（一句它支撑哪个要点）。除了计算代码，还要列 `配置`（超参数、骨干、维度所在的 yaml）和 `回执`（证明最终报告的模型确实这样跑过的运行记录，如重拟合 receipt、`report.json`；不拷权重）。Results 不列代码；核对时从图读的数据文件反查**写出它的脚本**（不按文件名猜），把它和计算函数补进产生该结果的 Methods 小节，Results 节用 `methods` 指向这些小节。脚本和数据核对一致后才去掉"推测"。
 - **只拷点名文件**：Methods 的 `code/` 只收 `code` 明列的文件，不扫描或自动拷贝 import 依赖。归档用于写作证据核查，不承诺是可独立运行的仓库。原先只列在 Results 的计算并入对应 Methods，再用 `methods` 指向它；保留函数和 `note`，避免证据链断开。
 - **配置与回执按写作用途取舍**：每条显式设 `copy: full / excerpt / path`。`full` 整拷写作需要的紧凑配置或运行记录；`excerpt` 只摘录 `symbols` 点名的 JSON/YAML 键路径或 JSONL 中 `key` 精确匹配的记录；`path` 只在大纲写来源路径，不拷逐行数据、数组或不需要展开的训练日志。不能仅因文件存在便全部拷入；同一来源多条摘录合并所需键。
+- 术语和计数：项目有 `口径表.md` 时，要点、措辞边界和图表说明一律用规范名，计数照规范写法；发现口径表缺项或与代码不符，登记到 `_process/冲突台账.md`。
 - 写完逐条核对要点和代码：要点说的和代码做的不一致（例如写"读取概念分数"而代码用 sigmoid 后的概率、写"不用残差"而残差进入前向但权重在重拟合时置零），列进交付的问题清单，由用户决定措辞；不要擅自改写要点。纯绘图和表格编排脚本不列、不拷；如果脚本本身实现 PCA、AUC 或贡献分解等分析，例外列为 `role: 图内计算`，必须点名计算的 `symbols` 并写清支撑的分析。
 
 ## 第 4 步：检查

@@ -191,6 +191,10 @@ def _check_panels(fig, name, panels):
                            "(single-panel figure: export.save(..., panels='none'))")
 
 
+# 组图导出格式：TIFF 供投稿与 Word 组装使用（LZW、RGB，见 scipilot export_figure）；panel 仍为 pdf+svg。
+FORMATS = ["pdf", "svg", "png", "tiff"]
+
+
 def save(fig, name, prov, kind="main", size=None, cfg=None, dpi=600, panels="marked"):
     """Export ``fig`` to <out_dir>/figures/<kind>/<name>.{pdf,svg,png} (+ grayscale) and source.json,
     plus each ``panel.mark_panel``-ed axes to <out_dir>/panels/<name>/<name>_<id>.{pdf,svg}.
@@ -222,11 +226,11 @@ def save(fig, name, prov, kind="main", size=None, cfg=None, dpi=600, panels="mar
     _check_panels(fig, name, panels)
     out =Path(cfg.out_dir) / "figures" / kind
     with pdf_illustrator_safe():  # no palette images, no subset-tagged font names (both break Illustrator)
-        files = _export(fig, str(out / name), formats=["pdf", "svg", "png"],
+        files = _export(fig, str(out / name), formats=FORMATS,
                         size_inches=None, dpi=dpi, grayscale_preview=True)
     checks = {}
     for f in files:
-        if f.endswith((".pdf", ".svg")) or (f.endswith(".png") and "grayscale" not in f):
+        if f.endswith((".pdf", ".svg", ".tif", ".tiff")) or (f.endswith(".png") and "grayscale" not in f):
             cf_issues, _info = _check(f, min_dpi=300)
             if f.endswith(".pdf") and Path(f).is_file():  # missing files are check_figure's to report
                 cf_issues = list(cf_issues) + [("FAIL", m) for m in pdf_image_issues(f) + pdf_font_issues(f)]

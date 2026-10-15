@@ -130,6 +130,16 @@ def _md_body(sec, results, pending=frozenset()):
     return L
 
 
+def _check_records(o):
+    """title_check / causal_design 记录（结论纪律），随大纲 md/docx 一起交付（评审 2026-10-14：只校验不渲染
+    会让门禁逼出来的证据留在 yaml 里，写作技能读不到）。"""
+    rows = []
+    for sec in outline_check._nodes(o.get("results", [])):
+        if sec.get("title_check") or sec.get("causal_design"):
+            rows.append((sec["id"], str(sec.get("title_check") or "—"), str(sec.get("causal_design") or "—")))
+    return rows
+
+
 def to_md(o):
     pending = _pending(o)
     L = [f"# 写作大纲：{o.get('project', '')}", ""]
@@ -144,6 +154,12 @@ def to_md(o):
     if rows:
         L += ["## 图表引用清单", "", "| 资产 | panel | 首次引用 | 引用小节 | 状态 |", "|---|---|---|---|---|"]
         L += [f"| {a} | {p or '—'} | {f} | {'、'.join(s) or '—'} | {_status_zh(st)} |" for a, p, f, s, st in rows]
+        L.append("")
+    recs = _check_records(o)
+    if recs:
+        L += ["## 结论核对记录（title_check / causal_design）", "",
+              "| 小节 | 全称主张的核对（title_check） | 因果表述的设计依据（causal_design） |", "|---|---|---|"]
+        L += [f"| {i} | {tc} | {cd} |" for i, tc, cd in recs]
         L.append("")
     return "\n".join(L)
 
@@ -253,6 +269,19 @@ def to_docx(o, path):
             cell.paragraphs[0].runs[0].bold = True
         for a, p, f, s, st in rows:
             for cell, t in zip(tab.add_row().cells, (a, p or "—", f, "、".join(s) or "—", _status_zh(st))):
+                cell.text = t
+    recs = _check_records(o)
+    if recs:
+        h = para("结论核对记录（title_check / causal_design）", bold=True, size=14)
+        h.paragraph_format.space_before = Pt(10)
+        tab = d.add_table(rows=1, cols=3)
+        tab.style = "Table Grid"
+        tab.rows[0]._tr.get_or_add_trPr().append(OxmlElement("w:tblHeader"))
+        for cell, t in zip(tab.rows[0].cells, ("小节", "全称主张的核对（title_check）", "因果表述的设计依据（causal_design）")):
+            cell.text = t
+            cell.paragraphs[0].runs[0].bold = True
+        for i, tc, cd in recs:
+            for cell, t in zip(tab.add_row().cells, (i, tc, cd)):
                 cell.text = t
     d.save(str(path))
 

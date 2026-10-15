@@ -81,6 +81,15 @@ implementer 不得再派子代理（包括 reviewer）。回报写进 `task-NN-r
 - 真问题且后续任务依赖：选最小的解阻改动，`Task N: Ruling: <finding> — <决定与理由> — <cost if wrong>`，带进下一个 dispatch。
 只在到达上限时裁决；每条裁决都是台账行，禁止静默丢弃。
 
+## 项目约定（检测到 PROJECT.md 时）
+
+从工作目录或用户给的路径向上查找 `PROJECT.md`（medpaper-pipeline 建立的论文项目）。找到时，用户另行指定的路径优先，否则：
+
+- 在 `02_figures/`（medfig 项目根、git 仓库）内执行；台账和过程产物仍按本技能要求放 `02_figures/docs/_process/`，不移到论文项目根的 `_process/`。
+- 交付后把 `PROJECT.md` 状态表“出图”一行改为 `待确认`，写入 `02_figures/out/` 和 DELIVERY 说明路径。
+
+没有 `PROJECT.md` 时保持下文原有行为，不新建它。
+
 ## 流程总览
 
 ```

@@ -39,6 +39,9 @@ def build(cfg):
     # n per class comes from the data, never typed by hand; zero-count classes are reported as absent
     prov.set("n_by_class", {k: int(v) for k, v in n_by_class.items()})
     prov.set("absent_classes", [k for k, v in n_by_class.items() if v == 0])
+    prov.define("estimate", "Balanced accuracy per subgroup on the synthetic intervals.csv; three-decimal "
+                            "values with a true minus sign",
+                source="examples/minimal/tables/table_demo.py build(); intervals.csv")
     note = ("Estimates are balanced accuracy on synthetic data. Classes without cases: "
             + (", ".join(prov.values["absent_classes"]) or "none") + ".")
     return tab, note, prov

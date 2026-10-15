@@ -626,3 +626,50 @@ def test_save_uses_project_banned_list(project, monkeypatch, tmp_path):
     project.banned_extra = ["accuracy"]
     with pytest.raises(RuntimeError, match=r"banned=\['accuracy'\]"):
         export.save(fig, "t2", Provenance("t2"), size=(3, 2), cfg=project, panels="none")
+
+
+def test_provenance_define_writes_definitions(tmp_path):
+    import json
+    prov = Provenance("t")
+    prov.define("probe_bacc", "linear-probe BACC per representation stage", source="wave2.py:189-207",
+                fit_split="calibration", eval_split="external", scale="BACC")
+    out = prov.write(tmp_path)
+    doc = json.loads(out.read_text(encoding="utf-8"))
+    assert doc["definitions"]["probe_bacc"]["fit_split"] == "calibration"
+    assert doc["definitions"]["probe_bacc"]["source"] == "wave2.py:189-207"
+
+
+def test_provenance_define_requires_source_and_known_fields():
+    prov = Provenance("t")
+    with pytest.raises(ValueError):
+        prov.define("q", "edema burden", source="")
+    with pytest.raises(ValueError):
+        prov.define("q", "edema burden", source="pipeline.py:1228", fit="train")
+
+
+def test_provenance_without_definitions_keeps_old_schema(tmp_path):
+    import json
+    doc = json.loads(Provenance("t").write(tmp_path).read_text(encoding="utf-8"))
+    assert "definitions" not in doc
+
+
+def test_provenance_define_rejects_non_string_source_and_text():
+    # 审查 2026-10-14：str(None).strip() == "None" 曾让未核验的定义带着 "None" 出处通过
+    prov = Provenance("t")
+    for bad in (None, False, 0, [], "   "):
+        with pytest.raises(ValueError, match="source"):
+            prov.define("q", "edema burden", source=bad)
+    for bad_text in (None, 7):
+        with pytest.raises(ValueError, match="text"):
+            prov.define("q", bad_text, source="pipeline.py:1228")
+    assert prov.definitions == {}
+
+
+def test_provenance_define_text_passes_banned_gate():
+    # 定义文本与图注同一套禁用词 / 开发史闸门（定义在权威顺序里高于图注，不能从旁路进稿）
+    prov = Provenance("t")
+    with pytest.raises(ValueError, match="banned"):
+        prov.define("q", "validated edema burden", source="pipeline.py:1228")
+    prov.define("q", "edema burden as the unweighted mean of three edema-concept logits",
+                source="pipeline.py:1228")
+    assert prov.definitions["q"]["source"] == "pipeline.py:1228"

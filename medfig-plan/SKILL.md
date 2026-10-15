@@ -22,6 +22,15 @@ description: Use when the user needs to plan a set of medical research figures o
 | 已有批准的规格，要批量出多图 | medfig-orchestrate |
 | 写正文、摘要、润色 | 不属于本技能 |
 
+## 项目约定（检测到 PROJECT.md 时）
+
+从工作目录或用户给的路径向上查找 `PROJECT.md`（medpaper-pipeline 建立的论文项目）。找到时，用户另行指定的路径优先，否则：
+
+- medfig 项目根为 `02_figures/`，规格仍写到 `02_figures/docs/<YYYY-MM-DD>-figure-set-design.md`；结果资产默认从 `01_analysis/`（或其 README 指向的外部仓库）只读盘点，研究问题参考 `00_plan/`。
+- 规格提交审阅后，把 `PROJECT.md` 状态表“图表规划”一行改为 `待确认`，写入规格路径和版本。
+
+没有 `PROJECT.md` 时保持下文原有行为，不新建它。
+
 ## 流程总览
 
 1. 盘点结果资产（派子代理）
@@ -76,7 +85,7 @@ description: Use when the user needs to plan a set of medical research figures o
 
 | 字段 | 内容 |
 |---|---|
-| claim | 一句话结论（这个 panel 让读者相信什么） |
+| claim | 一句话结论（这个 panel 让读者相信什么）。规划阶段先写成待检验的命题或带范围的描述；只有在第 1 步清单中逐队列、逐类别核对过数值、列出例外后，才写成结论句，并注明核对依据（见下方“结论纪律”） |
 | data | 文件路径（相对数据根）+ 列 / 数组键 + 筛选条件 + 允许的确定性变换 |
 | chart | 图型与编码（x / y / 颜色 / marker / 分面） |
 | reason | 为什么选这个图型、为什么不选更常见的那个 |
@@ -86,6 +95,7 @@ description: Use when the user needs to plan a set of medical research figures o
 硬规则：
 
 - 一 panel 一结论。一个 panel 要说两件事就拆开；说不出结论的 panel 删掉。
+- 结论纪律：claim 和图标题不使用因果或定位动词（causes、drives、arises at、由……造成、发生在……这一步），除非设计本身支持因果推断；不写全称结论（“各队列 / 各界面都……”），除非逐项数值无例外。存在例外时，claim 写明范围（“4 个队列中的 3 个”）并把例外写进 caption 字段。下游的大纲、图注、Results 会把 claim 当作写作意图，这里写得过强，会一路传到成稿。
 - panel 数与版式按论证定，不固定 4 个、不机械 2×2。每张图在标题行写明 panel 数与版式（例："3 panel；a 占左半，b/c 叠右"）（A2, A4）。
 - 森林类图（forest / 点 + CI 横排）全套 ≤ 3 处，每处写一句为什么非它不可；其他重复图型也要写理由（A2）。
 - x 有序（时间、剂量、阶段、k）才连线；类别 x 不连线。n 很小（如 n ≤ 5 个 seed / 受试者）画点不画柱；零值不画柱，改点图或删除该信息，不做纯文字 panel（A3, S2）。
@@ -118,6 +128,7 @@ description: Use when the user needs to plan a set of medical research figures o
 
 - 主表 + 附表，每张表写明内容、列、来源文件、输出格式（CSV + Markdown + LaTeX + source.json；Word 交下游）。
 - 必备口径裁决表（ST11 式）：每条语义裁决或相对上游的修正，含权威文档、旧 → 新表述、上游文件 SHA-256 变化（A8, E7）。
+- 论文项目（项目根有 `PROJECT.md`）：同时建立项目根的 `口径表.md`（格式见 `medpaper-pipeline/references/consistency-guards.md` 第 2 节），至少写入：每个比较条件和规则的规范名与禁用别名（代码标签如 oracle、R0–R5 不进论文，过强称呼如 upper bound 列为禁用）、每个派生量的定义（拟合分区、评估分区、分组变量、尺度，出处到代码行）、各队列的扫描数与分组数。规格中的口径裁决只写引用，不在两处重复维护。
 - 必备图表来源索引（ST12 式）：由全部 source.json 自动生成，列出每个 panel 的输入路径、SHA-256、行数、变换；所有图导出后最后重建（A7）。
 - 不可估计 / 未收集清单表，让缺口显式可见。
 

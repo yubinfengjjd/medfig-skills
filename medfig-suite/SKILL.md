@@ -24,6 +24,7 @@ description: Use when the user wants a complete set of figures and tables (and t
 - 图表已定稿，要 Methods / Results 写作大纲或按小节归档文件 → `medfig-outline`。
 - 研究设计图、模型 / 网络架构图、流程示意图（用 ChatGPT 等生图模型画）→ `medfig-schematic`。
 - 要把参考图 1:1 复刻成可编辑矢量，或在用户已打开的 Illustrator 文档里原生重画 → `medfig-illustrator`。
+- 要从规划、出图一路走到大纲和 Methods / 图注 / Results / Introduction 成稿，或要整理论文项目目录、查看项目进度 → `medpaper-pipeline`（逐阶段调用本套技能和写作技能）。
 
 ## 决策表
 
@@ -37,6 +38,7 @@ description: Use when the user wants a complete set of figures and tables (and t
 | 图表定稿，要写作大纲 / 分节归档 | medfig-outline |
 | 示意图、研究设计图、网络架构图（生图模型画） | medfig-schematic |
 | 参考图 1:1 复刻成可编辑矢量 / 在 Illustrator 里原生绘制 | medfig-illustrator |
+| 从出图到写作整条流水线 / 项目目录与进度 | medpaper-pipeline |
 | 非医学图表；用代码直接画示意图 | 不在本套范围，告诉用户 |
 
 ## 下游需要的输入

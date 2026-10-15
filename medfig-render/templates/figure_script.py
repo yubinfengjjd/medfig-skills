@@ -97,6 +97,16 @@ def build():
     prov.set("c_n", int(cm["count"].sum()))
     prov.set("c_absent", ax_cm._anchor_absent)
 
+    # definitions: what each derived quantity IS, checked against this script and the inputs; the legends
+    # and writing steps read these instead of the free-text caption (source.json "definitions" key).
+    # TODO: source 换成你脚本的实际文件名和代码行（如 "scripts/fig1.py:120-140"），定义文本按本图实际写。
+    prov.define("b_roc", "Mean and between-run SD of ROC AUC over the runs in scores/roc_runs.csv; the shaded "
+                         "band is ±1 SD across runs, not a confidence interval",
+                source="templates/figure_script.py build() panel b; scores/roc_runs.csv")
+    prov.define("c_matrix", "Row-normalised confusion matrix over the classes in CLASSES; classes with zero "
+                            "truth count are hatched as absent",
+                source="templates/figure_script.py build() panel c; tables/confusion.csv")
+
     # ---- panels: mark for S4 standalone export, then letter them (letters only in the composite)
     panel.mark_panel(ax_img, "a", extra_axes=[cb.ax])
     panel.mark_panel(ax_roc, "b")

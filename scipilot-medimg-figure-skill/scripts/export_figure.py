@@ -114,7 +114,12 @@ def export_figure(
         }
         if fmt in RASTER_FORMATS:
             kwargs["dpi"] = dpi
+        if fmt in ("tif", "tiff"):
+            # 期刊级 TIFF：LZW 无损压缩，避免未压缩体积（数十 MB/图）。
+            kwargs["pil_kwargs"] = {"compression": "tiff_lzw"}
         fig.savefig(path, **kwargs)
+        if fmt in ("tif", "tiff"):
+            _tiff_to_rgb(path, dpi)
         saved.append(path)
         print(f"[scipilot-figure-skill] wrote {path}")
 
@@ -123,6 +128,25 @@ def export_figure(
         if gray_path:
             saved.append(gray_path)
     return saved
+
+
+def _tiff_to_rgb(path: str, dpi: int) -> None:
+    """期刊 TIFF：8-bit RGB、无透明通道（白底展平）、LZW 压缩，并写入真实 DPI 元数据
+    （matplotlib 直出的 TIFF 常丢 dpi，投稿系统按元数据查 ≥300 dpi）。"""
+    try:
+        from PIL import Image
+    except ImportError:
+        return
+    with Image.open(path) as im:
+        if im.mode in ("RGBA", "LA", "PA", "P"):
+            src = im.convert("RGBA")
+            out = Image.new("RGB", src.size, (255, 255, 255))
+            out.paste(src, mask=src.split()[-1])
+        elif im.mode != "RGB":
+            out = im.convert("RGB")
+        else:
+            out = im.copy()
+    out.save(path, compression="tiff_lzw", dpi=(dpi, dpi))
 
 
 def _grayscale_from(fig, basename: str, dpi: int) -> str | None:

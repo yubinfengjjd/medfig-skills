@@ -140,6 +140,64 @@ def test_results_title_must_be_a_finding(proj, tmp_path):
     assert any("3.2" in i and "number" in i for i in out)
 
 
+def test_results_title_conclusion_discipline(proj, tmp_path):
+    o = _outline()
+    o["results"][0]["title"] = "The external loss arises at the decision step through drifting concepts"
+    o["results"][0]["subtitle"] = "外部掉点由少数概念漂移造成"
+    o["results"][1]["title"] = "Edema recall is high in all external cohorts"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("3.1" in i and "causal" in i for i in out)
+    assert any("3.2" in i and "title_check" in i for i in out)
+    # a recorded per-cohort check clears the universal claim; a stated causal design clears the verb
+    o["results"][0]["causal_design"] = "randomized intervention on concept inputs"
+    o["results"][1]["title_check"] = "Edema recall per cohort: 0.95, 0.97, 0.96; no exceptions"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert not any("causal" in i or "title_check" in i for i in out)
+
+
+def test_title_claims_questions_compounds_negation(proj, tmp_path):
+    # 审查 2026-10-14：问句不算主张；连字合成词（All-cause / all-optical）不算全称；否定因果句不算因果
+    o = _outline()
+    o["results"][0]["title"] = "Which concepts drive the shift"
+    o["results"][0]["subtitle"] = "哪些概念驱动了这一变化？"
+    o["results"][1]["title"] = "All-cause risk stays flat and all-optical inputs remain stable"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert not any("causal" in i or "title_check" in i for i in out), out
+    o["results"][1]["subtitle"] = "各界面误差都更低"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("subtitle" in i and "title_check" in i for i in out), out
+    o["results"][1]["subtitle"] = "外部性能并非由概念漂移造成"
+    o["results"][1]["title"] = "External performance remains unchanged across cohorts"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert not any("causal" in i for i in out), out
+
+
+def test_title_records_must_be_substantive(proj, tmp_path):
+    # 占位记录（checked / yes）不算数；含数值的核对或 “n/a：<理由>” 可以过
+    o = _outline()
+    o["results"][1]["title"] = "Edema recall is high in all external cohorts"
+    o["results"][1]["title_check"] = "checked"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert any("title_check" in i for i in out), out
+    o["results"][1]["title_check"] = "n/a：量化的是单个决策，无逐队列核对"
+    out = outline_check.check(_write(tmp_path, o), proj)
+    assert not any("title_check" in i or "causal" in i for i in out), out
+
+
+def test_title_records_rendered_into_outline(proj, tmp_path):
+    # 审查 2026-10-14：title_check / causal_design 必须随大纲交付，不能只留在 yaml 里
+    import docx  # noqa: PLC0415
+    o = _outline()
+    o["results"][1]["title_check"] = "Edema recall per cohort: 0.95, 0.97, 0.96; no exceptions"
+    o["results"][1]["causal_design"] = "randomized intervention on concept inputs"
+    outline_build.build(_write(tmp_path, o), proj, tmp_path / "out_records")
+    md = (tmp_path / "out_records" / "写作大纲.md").read_text(encoding="utf-8")
+    assert "结论核对记录" in md and "Edema recall per cohort" in md and "randomized intervention" in md
+    d = docx.Document(tmp_path / "out_records" / "写作大纲.docx")
+    cells = [c.text for t in d.tables for r in t.rows for c in r.cells]
+    assert any("Edema recall per cohort" in t for t in cells) and any("结论核对记录" in p.text for p in d.paragraphs)
+
+
 def test_build_docx_md_and_folders(proj, tmp_path):
     out = tmp_path / "outline_out"
     res = outline_build.build(_write(tmp_path, _outline()), proj, out)

@@ -97,7 +97,7 @@ if __name__ == "__main__":
    - `qa.palette_clash`（S3）：同一 axes 里两种不同数据色几乎同色（ΔE00 < 12，可在 `[qa] palette_min_delta_e` 调）。修法是换色板颜色（用 `style.delta_e` 和图内每个颜色比），不是调低阈值
 3. scipilot `export_figure`：`<out_dir>/figures/<kind>/<name>.{pdf,svg,png}` + `_grayscale.png`（600 dpi），再逐个 `check_figure`，FAIL 时删除已写文件并抛错。PDF 里的位图一律写成 8 位 DeviceRGB（`export.pdf_rgb_images`）：matplotlib 默认把 ≤ 256 色的位图（热图、掩膜、混淆矩阵）存成索引色，Adobe Illustrator 置入这类 PDF 时会把颜色读错（格子发白、白字消失）。导出后 `export.pdf_image_issues` 复查合成图和每个 panel PDF，发现索引色或低于 8 位的位图即 FAIL。嵌入字体一律写真实 PostScript 名（`ArialMT`，不带 `ABCDEF+` 子集前缀，`export.pdf_plain_font_names`；两项补丁合并为 `export.pdf_illustrator_safe`）：带前缀的字体 Illustrator 打开时报"缺少字体"、不认本机 Arial；`export.pdf_font_issues` 复查，带前缀即 FAIL。装有 Arial 时 `style.apply` 把 Arial 排在 Helvetica 前，SVG 在 Windows 上不报缺 Helvetica。数学文本（`$P_{\mathrm{BH}}$`、`×10$^{−6}$`）用正文字体排（`style.RC` 的 `mathtext.*`），不嵌入 DejaVu；正文之外混入 DejaVu / STIX / cm 字体即 FAIL。
 4. S4：每个 `mark_panel` 过的 panel 另存 `<out_dir>/panels/<name>/<name>_<id>.{pdf,svg}`，fonttype 42、文字可选、尺寸与组图中一致、隐藏 a/b/c 序号；缺失即 FAIL 并删除组图。
-5. 写 `<name>.source.json`（inputs、transforms、values、qa、panels）。
+5. 写 `<name>.source.json`（inputs、transforms、values、qa、panels，以及 `definitions`）。`definitions` 用 `prov.define(key, text, source=...)` 写：图中每个派生量、每个比较条件，都要写清拟合 / 估计分区、评估分区、分组变量和尺度（概率还是 logit），`source` 写到代码文件与行号或回执键。这些内容要回代码或回执核对后再写，不凭记忆，也不照抄旧图注。下游图注和写作技能以这个字段为准。
 
 QA 失败时修图，不修检查：
 - S1 超标 → 用 `layout.image_width_ratios` 分配列宽，图例移到图内角或上方，不留侧栏。
@@ -153,6 +153,8 @@ curves.roc_mean_sd(ax, curves_b, label="Model B", kind="curve")   # 已算好的
 - 适用限制：共享成分不是独立复现、两类队列不称三分类验证、预测轮廓、CAM 共享色阶、概率图重采样、缺像素间距不画比例尺、单次 ROC。
 - 禁用词：默认 validated, superior, clinical benefit, UMAP, deployment, diagnostic, clinically proven。项目只在 `figkit.toml` 里调整：`[qa] banned_extra = [...]` 追加，`[qa] banned_allow = [...]` 放行默认词（如确实使用 UMAP、报告 diagnostic accuracy 的论文）。图、表、图注共用这一张项目表，用 `qa.banned_in_text(text)` 检查，命中即抛错。
 - 方法描述（约束、归一化、校准方式）要能追溯到当前运行配置。
+- 定义类叙述（拟合在哪个分区、按什么分组、量是概率还是 logit、属于哪项分析）只从 `definitions` 生成，不在 caption 里另写一套；`definitions` 缺项时先补，不凭印象写。
+- 图内类别标签和列名用 `口径表.md` 的规范名（项目有口径表时）；必须保留代码标签时，在图注里括注规范名。
 
 ## 9. 纯影像网格：调用 scipilot-medimg
 

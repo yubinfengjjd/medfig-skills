@@ -44,6 +44,37 @@ COPY_MODES = ("full", "excerpt", "path")   # 配置 / 回执: copy whole, copy o
 EXCERPT_SUFFIXES = (".json", ".jsonl", ".yaml", ".yml")
 CODE_NOTE = re.compile(r"（内部代号[^）]*）")
 VAGUE_TITLE = re.compile(r"^(?:results? of|overview of|analysis of|performance of|.* results?)\b", re.I)
+# conclusion discipline: causal / locating verbs need a design that supports them; universal claims need a
+# per-cohort check with listed exceptions (outline.yaml section key ``title_check``).
+# word-boundary guards exclude hyphen compounds ("All-cause", "data-driven"); a question (…? / …？) is not a
+# claim and is skipped; a negation right before the verb ("并非由…造成", "did not cause") cancels the hit.
+CAUSAL_TITLE = re.compile(r"(?<![\w-])(?:caus(?:e|es|ed|ing)|driv(?:e|es|en|ing)|arises? at|due to|leads? to)(?![\w-])"
+                          r"|由[^。；，]{0,24}造成|导致|发生在[^。；，]{0,10}这一步", re.I)
+UNIVERSAL_TITLE = re.compile(r"(?<![\w-])(?:all|every|each|uniformly|consistently)(?![\w-])|所有|全部|各[^。；，]{0,10}都", re.I)
+NEGATED = re.compile(r"(?:并非|不是|非|不|未|没|no|not|rather than)\s*$", re.I)
+QUESTION = re.compile(r"^(?:which|what|how|where|why|when|whether|who)\b|^(?:是否|如何|哪|什么|为何|为什么)", re.I)
+VACUOUS_RECORD = {"checked", "yes", "ok", "done", "true", "design", "n/a", "na", "是", "有", "不适用"}
+
+
+def _flagged_claims(part):
+    """(causal, universal) hits for one title/subtitle: questions and negated causal phrases are not claims."""
+    text = str(part or "").strip()
+    if text.endswith(("?", "？")) or QUESTION.match(text):
+        return None, None
+    causal = next((m for m in CAUSAL_TITLE.finditer(text)
+                   if not NEGATED.search(text[max(0, m.start() - 6):m.start()])), None)
+    return causal, UNIVERSAL_TITLE.search(text)
+
+
+def _recorded(value, need_value):
+    """title_check / causal_design 必须记录实质内容：title_check 要含数值，或写 “n/a：<理由>”；
+    causal_design 要 ≥8 字符且不是 yes/design 这类空话（评审 2026-10-14：只查非空挡不住占位文本）。"""
+    s = str(value or "").strip()
+    if re.match(r"^(?:n\s*/?\s*a|不适用)\s*[:：、,—\-]?\s*\S{4,}", s, re.I):
+        return True
+    if s.lower() in VACUOUS_RECORD or len(s) < 8:
+        return False
+    return bool(re.search(r"\d", s)) if need_value else True
 
 
 def _texts(sec, results):
@@ -698,6 +729,16 @@ def check(outline_path, project, figkit_toml=None):
         t = sec.get("title", "")
         if NUM.search(t):
             out.append(f"Results {sec['id']} title {t!r}: no number in the title (numbers go in the paragraphs)")
+        for label, part in (("title", t), ("subtitle", sec.get("subtitle", ""))):
+            if not part:
+                continue
+            causal, univ = _flagged_claims(part)
+            if causal and not _recorded(sec.get("causal_design"), need_value=False):
+                out.append(f"Results {sec['id']} {label} {part!r}: causal / locating verb; describe the observed "
+                           "pattern (or set causal_design: <why the design supports it — ≥8 字，不能只写 yes/design>)")
+            if univ and not _recorded(sec.get("title_check"), need_value=True):
+                out.append(f"Results {sec['id']} {label} {part!r}: universal claim needs title_check "
+                           "(per-cohort / per-class values with exceptions; 或写 'n/a：<理由>')")
     # ---- wording
     for results, secs in ((False, _nodes(o.get("methods", []))), (True, _nodes(o.get("results", [])))):
         for sec in secs:

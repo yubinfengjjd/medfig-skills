@@ -151,6 +151,9 @@ results:
   - id: "3.2"
     title: <一句话发现>                 # 大节标题必须是发现句
     subtitle: <中文副标题>
+    title_check: <标题含全称词（all / 各……都）时必填：逐队列 / 类别的数值与例外；确无逐队列核对时写 “n/a：<理由>”>
+    causal_design: <标题含因果或定位动词时必填：设计为何支持（≥8 字，不能只写 yes/design）；否则改写标题>
+    # 两个字段都会渲染进 写作大纲.md/.docx 的“结论核对记录”表；问句标题（…？）不算因果或全称主张，不需要填
     short: External
     subsections:
       - id: "3.2.1"
