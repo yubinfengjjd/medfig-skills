@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.0 (2026-10-15)
+
+新增医学论文写作套件（七个 `medical-sci-*` 写作技能 + 编排技能 `medpaper-pipeline`）：
+
+- `medpaper-pipeline`：从图表规划 → 出图 → 写作大纲 → Methods → 图注 → Results → Introduction → Discussion → Abstract → 成品组装与润色逐阶段调用对应技能，每步停下等作者确认；管理论文项目目录与 `PROJECT.md` 进度；自带 `consistency_check.py`（禁用别名、关键计数、疑似丢失小数点）、`manuscript_check.py`（词数、句长、模板句、引用与数字核对）与 `intake_check.py`。
+- `medical-sci-methods / legends / results / introduction / discussion / abstract`：各节写作与修订；英文成稿附中文对照与核查说明；Introduction 与 Discussion 逐条核验 PMID；Discussion 以方法、结果、图注、引言齐备为前置；Abstract 默认带小标题四段、英文正文 ≤250 词，附关键词与 Highlights。
+- `medical-sci-finalize`：组装主稿 + 补充材料两份 Word（A4 纵向、图表插入首次引用节末尾、图注仅标题加粗、超宽表缩字号不拆表、优先嵌入 TIFF、不生成文献表而提供参考文献候选清单），并做英文全稿保守润色（数字 / 单位 / 引用 / 口径限定零改动；产出清稿、逐段修改记录与裁决清单）。
+- `install.py` 与 `tests/test_skills.py` 纳入写作套件（格式、引用链接、泄露扫描与安装器测试）。
+
+medfig 侧同批更新：
+
+- 结论纪律：`medfig-plan` 的 claim 先写待检验命题、核对数值后才成结论；`medfig-outline` 检查与构建新增 `title_check` / `causal_design` 字段（问句与连字符合成词不误报、否定式因果句豁免、记录须含实质内容），并把"结论核对记录"渲染进 `写作大纲.md` / `.docx`。
+- `figkit`：新增 `Provenance.define()` 记录派生量与比较条件的定义（text / source 必须为非空字符串、文本过禁用词闸门，写入 `source.json` 的 `definitions`）；模板与最小示例补 `define()` 用法；`medfig-orchestrate` 复审清单相应增补。
+- 项目约定：`medfig-plan` / `medfig-outline` / `medfig-orchestrate` 检测到 `PROJECT.md` 时按论文项目约定执行；`medfig-suite` 增加 `medpaper-pipeline` 路由。
+- 组图导出新增 TIFF：`figkit.export.FORMATS` 含 `tiff`；scipilot `export_figure` 输出期刊级 TIFF（8-bit RGB、白底展平、LZW、真实 DPI 元数据）；`medical-sci-finalize` 组装时优先嵌入 TIFF、缺失回退 PNG 并告警。
+
 ## 0.6.5 (2026-10-11)
 
 `medfig-outline` 审查修复：

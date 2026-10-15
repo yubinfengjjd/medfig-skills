@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Install the seven medfig-* skills and their dependency skill scipilot-medimg-figure-skill (stdlib only).
+"""Install the medfig-* figure skills, scipilot-medimg-figure-skill and the medical writing suite (stdlib only).
 
-Copies ONLY medfig-suite, medfig-plan, medfig-render, medfig-orchestrate, medfig-outline, medfig-schematic,
-medfig-illustrator and
-scipilot-medimg-figure-skill (medfig-render calls its scripts/).
+Copies ONLY the directories listed in SKILLS: medfig-suite, medfig-plan, medfig-render, medfig-orchestrate,
+medfig-outline, medfig-schematic, medfig-illustrator, scipilot-medimg-figure-skill (medfig-render calls its
+scripts/), medical-sci-methods, medical-sci-legends, medical-sci-results, medical-sci-introduction,
+medical-sci-discussion, medical-sci-abstract, medical-sci-finalize and medpaper-pipeline.
 Existing installs are moved to a timestamped backup before being replaced;
 nothing is ever deleted. After copying, every file is SHA-256 verified
 against the source and a `.medfig_install.json` stamp is written.
@@ -26,7 +27,9 @@ from pathlib import Path
 
 SRC_ROOT = Path(__file__).resolve().parent
 SKILLS = ("medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline", "medfig-schematic",
-          "medfig-illustrator", "scipilot-medimg-figure-skill")
+          "medfig-illustrator", "scipilot-medimg-figure-skill",
+          "medical-sci-methods", "medical-sci-legends", "medical-sci-results", "medical-sci-introduction",
+          "medical-sci-discussion", "medical-sci-abstract", "medical-sci-finalize", "medpaper-pipeline")
 STAMP = ".medfig_install.json"
 
 EXCLUDED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".git"}
@@ -256,7 +259,7 @@ class Installer:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(description="Install the medfig-* skills.")
+    p = argparse.ArgumentParser(description="Install the medfig-* skills and the medical writing suite.")
     p.add_argument("--target", action="append", type=Path,
                    help="skill root to install into (repeatable; default "
                         "~/.claude/skills and ~/.codex/skills)")
@@ -267,7 +270,7 @@ def main(argv=None) -> int:
     mode.add_argument("--update", action="store_true",
                       help="only reinstall skills whose manifest hash differs")
     mode.add_argument("--uninstall", action="store_true",
-                      help="move installed medfig-* dirs to backup (never deletes)")
+                      help="move installed skill dirs to backup (never deletes)")
     mode.add_argument("--verify", action="store_true",
                       help="only verify installed trees against the source")
     a = p.parse_args(argv)

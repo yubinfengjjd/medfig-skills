@@ -1,0 +1,4 @@
+interface:
+  display_name: "医学 SCI 图注与表注写作"
+  short_description: "依据大纲、成图、详细图注、源数据与表格撰写医学图注、附图图注及表格标题与表注，英文加中文对照"
+  default_prompt: "使用 $medical-sci-legends，依据大纲、成图、详细图注和表格撰写图注与表注，输出英文及中文对照。"

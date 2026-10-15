@@ -12,8 +12,11 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS = ["medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline", "medfig-schematic",
           "medfig-illustrator"]
+# medical writing suite: format / reference-link / leak checks (no evals/ shipped for these yet)
+WRITING_SKILLS = ["medical-sci-methods", "medical-sci-legends", "medical-sci-results", "medical-sci-introduction",
+                  "medical-sci-discussion", "medical-sci-abstract", "medical-sci-finalize", "medpaper-pipeline"]
 # dependency skill derived from Haojae/scipilot-figure-skill (MIT): leak scan + forbidden-workflow scan only
-ALL_SKILLS = SKILLS + ["scipilot-medimg-figure-skill"]
+ALL_SKILLS = SKILLS + ["scipilot-medimg-figure-skill"] + WRITING_SKILLS
 ALLOWED = {"name", "description", "license", "metadata"}
 # Project names / dataset names that must never appear in the skills: one per line in the git-ignored
 # tests/leak_strings.local.txt (kept out of the public repo), plus the generic markers below.
@@ -44,7 +47,7 @@ def _split(skill_md):
     return fm, text[m.end():]
 
 
-@pytest.mark.parametrize("name", SKILLS)
+@pytest.mark.parametrize("name", SKILLS + WRITING_SKILLS)
 def test_skill_md_exists(name):
     d = _skill_dir(name)
     assert (d / "SKILL.md").is_file(), f"{name}/ exists but SKILL.md missing"
@@ -57,7 +60,7 @@ def _skill_md(name):
     return d, p
 
 
-@pytest.mark.parametrize("name", SKILLS)
+@pytest.mark.parametrize("name", SKILLS + WRITING_SKILLS)
 def test_frontmatter(name):
     d, p = _skill_md(name)
     fm, body = _split(p)
@@ -97,7 +100,7 @@ LINK_RE = re.compile(r"\]\(([^)\s#]*references/[^)\s#]+\.md)(?:#[^)]*)?\)")
 CODE_REF_RE = re.compile(r"`((?:[\w.-]+/)?references/[\w.-]+\.md)`")
 
 
-@pytest.mark.parametrize("name", SKILLS)
+@pytest.mark.parametrize("name", SKILLS + WRITING_SKILLS)
 def test_reference_links_exist(name):
     d, p = _skill_md(name)
     text = p.read_text(encoding="utf-8")

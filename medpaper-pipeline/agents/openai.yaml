@@ -1,0 +1,4 @@
+interface:
+  display_name: "医学论文出图与写作编排"
+  short_description: "编排医学出图到Methods、图注、Results、Introduction、Discussion与Abstract，逐阶段确认"
+  default_prompt: "使用 $medpaper-pipeline，检查本项目 PROJECT.md 状态并推进下一阶段。"

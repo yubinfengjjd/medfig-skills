@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml/badge.svg)](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-面向医学 / 临床 AI 论文的图表技能：七个 medfig 技能，加上它们依赖的 `scipilot-medimg-figure-skill`，一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
+面向医学 / 临床 AI 论文的全流程技能：图表侧是七个 medfig 技能和它们依赖的 `scipilot-medimg-figure-skill`；写作侧是七个 `medical-sci-*` 写作技能和把它们串起来的 `medpaper-pipeline`。一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
 
 | 技能 | 作用 |
 |---|---|
@@ -19,8 +19,22 @@
 
 - 只要一张纯影像网格（已导出的 PNG/JPG/TIF + 掩膜/轮廓/热力图/放大框/比例尺，无统计图混排）→ `scipilot-medimg-figure-skill`。
 - 其他情况：还没有规格 → `medfig-plan`；已有规格、单张图 → `medfig-render`；图表定稿后写作大纲 → `medfig-outline`；示意图 / 架构图 → `medfig-schematic`；参考图 1:1 复刻成矢量 → `medfig-illustrator`；多张图 → `medfig-orchestrate`（内部逐张调用 `medfig-render`）。
+- 写作：从出图一路到 Methods / 图注 / Results / Introduction / Discussion / Abstract 与成品 Word → `medpaper-pipeline`（逐阶段调用写作技能）；只写或修订单节 → 直接调用对应的 `medical-sci-*` 技能。
 
 非医学图表、用代码直接画的示意图不在范围内。
+
+## 医学写作套件
+
+| 技能 | 作用 |
+|---|---|
+| `medpaper-pipeline` | 写作侧入口与编排：按 图表规划 → 出图 → 写作大纲 → Methods → 图注 → Results → Introduction → Discussion → Abstract → 成品组装与润色 逐阶段调用对应技能，每步停下等作者确认；管理论文项目目录与 `PROJECT.md` 进度，并自带一致性检查脚本 |
+| `medical-sci-methods` | Methods 正文（英文成稿附中文对照与核查说明） |
+| `medical-sci-legends` | 主图 / 附图图注与表题表注 |
+| `medical-sci-results` | Results 正文 |
+| `medical-sci-introduction` | Introduction（引用逐条核验 PMID） |
+| `medical-sci-discussion` | Discussion（方法、结果、图注、引言齐备后才动笔） |
+| `medical-sci-abstract` | 摘要（中英对照、关键词、Highlights；默认英文正文 ≤250 词） |
+| `medical-sci-finalize` | 成品 Word 组装（主稿 + 补充材料）与英文全稿保守润色（含去防御性写作） |
 
 ## 前置条件
 
@@ -41,21 +55,21 @@ python install.py
 
 以后更新：`git pull && python install.py --update`。
 
-`install.py` 只用标准库，只复制上述七个技能目录，并排除 `__pycache__`、`*.pyc`、`.pytest_cache`、`.git` 以及 `examples/**/out`、`examples/**/data` 等生成物。默认目标为 `~/.claude/skills` 和 `~/.codex/skills`。
+`install.py` 只用标准库，只复制清单中的技能目录（七个 medfig、`scipilot-medimg-figure-skill`、七个 `medical-sci-*` 写作技能与 `medpaper-pipeline`），并排除 `__pycache__`、`*.pyc`、`.pytest_cache`、`.git` 以及 `examples/**/out`、`examples/**/data` 等生成物。默认目标为 `~/.claude/skills` 和 `~/.codex/skills`。
 
 ```bash
 python install.py --dry-run          # 只打印计划（复制、备份、目标），不改动任何文件
 python install.py                    # 安装；已有的同名技能先备份
 python install.py --update           # 仅重装清单哈希有变化的技能
 python install.py --verify           # 对比源与已安装文件的 SHA-256
-python install.py --uninstall        # 把已安装的这七个技能移到备份目录（从不删除）
+python install.py --uninstall        # 把已安装的技能移到备份目录（从不删除）
 python install.py --target D:/x/skills --target D:/y/skills   # 覆盖默认目标，可多次给出
 ```
 
 - 备份位置：`~/skill_backups/medfig_<时间戳>/<目标名>/<技能名>`（可用 `--backup-root` 修改），运行时会打印。
 - 复制后逐文件做 SHA-256 校验，并写入 `<目标>/<技能>/.medfig_install.json`（版本 = 源仓库 git 短 SHA，取不到时为 `unknown`；时间戳；文件数；清单哈希）。
 - 任何校验失败时退出码非零。
-- 只处理这七个技能目录，目标根目录中的其他技能不会被读写。已装过上游或旧版 `scipilot-medimg-figure-skill` 的，安装时会先备份再替换。
+- 只处理清单中的技能目录，目标根目录中的其他技能不会被读写。已装过上游或旧版 `scipilot-medimg-figure-skill` 的，安装时会先备份再替换。
 
 ## Codex 用户：设置 FIGKIT_LIB 与 scipilot_scripts
 

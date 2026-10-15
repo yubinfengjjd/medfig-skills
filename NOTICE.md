@@ -20,3 +20,13 @@ v2.1.0（commit `43098dd`，MIT，© 2026 Haojae），原许可证见 `scipilot-
 新增的医学影像 panel 脚本与文档、对上游文件的修改，逐项列在 `scipilot-medimg-figure-skill/NOTICE.md`；
 继承文件的上游哈希见 `original_skill_hashes.txt`。`medfig-render` 的样式和导出调用它的脚本
 （`setup_style.py`、`export_figure.py`、`check_figure.py` 等），由 `install.py` 一起安装。
+
+## 医学写作技能（medical-sci-* / medpaper-pipeline）
+
+| 来源 | 许可证 | 用在哪里 | 方式 |
+|---|---|---|---|
+| [Adkid-Zephyr/anti-defensive-writing-Skill](https://github.com/Adkid-Zephyr/anti-defensive-writing-Skill) | MIT（© 2026 Adkid-Zephyr；许可原文保留在 `medical-sci-finalize/references/polish-rules.md` 末尾） | `medical-sci-finalize/references/polish-rules.md` 的去防御性写作规则 | 改写为医学稿保守档，注明出处 |
+| humanizer 技能 | 以来源仓库为准 | `medical-sci-finalize/references/polish-rules.md` 的去 AI 腔规则要点 | 仅摘要规则意旨 |
+| academic-research-skills 插件 | 以来源仓库为准 | `medical-sci-finalize/references/polish-rules.md` 的写作质量与 anti-pattern 要点 | 仅摘录规则意旨 |
+
+写作技能的其他规则来自本课题写作流程中积累的缺陷与修正，未包含上述来源之外的第三方代码。

@@ -16,8 +16,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-      # Installs the five medfig skills and scipilot-medimg-figure-skill (the dependency medfig-render
-      # calls) into ~/.claude/skills and ~/.codex/skills, exactly as a user would.
+      # Installs every skill listed in install.py (medfig-*, scipilot-medimg-figure-skill, medical-sci-*,
+      # medpaper-pipeline) into ~/.claude/skills and ~/.codex/skills, exactly as a user would.
       - name: Install skills
         run: python install.py
       # The layout tests measure text with Arial. ttf-mscorefonts-installer downloads from SourceForge and exits 0

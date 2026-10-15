@@ -1,4 +1,5 @@
-# Runtime dependencies for all skills in this repository (medfig-* + scipilot-medimg-figure-skill).
+# Runtime dependencies for all skills in this repository (medfig-*, scipilot-medimg-figure-skill,
+# medical-sci-* and medpaper-pipeline).
 # Pinned to the versions the full test suite passes with (Python 3.12).
 # Install:  pip install -r requirements.txt
 matplotlib==3.9.2

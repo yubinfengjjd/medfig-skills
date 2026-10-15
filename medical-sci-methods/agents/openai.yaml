@@ -1,0 +1,4 @@
+interface:
+  display_name: "医学 SCI Methods 写作"
+  short_description: "依据已确认主线与实际材料撰写或修订医学 Methods，核验引用并提供中文对照"
+  default_prompt: "使用 $medical-sci-methods，依据已确认大纲和实际代码材料按顺序撰写 Methods，保留父级总括标题并输出英文及中文对照。"

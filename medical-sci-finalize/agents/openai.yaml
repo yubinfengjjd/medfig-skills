@@ -1,0 +1,4 @@
+interface:
+  display_name: "医学 SCI 成品组装与润色"
+  short_description: "在六类正文完成后，把成稿与图表组装成主稿+补充两份投稿级 Word，并对英文全稿做保守润色与去防御性写作，数字与口径限定零改动"
+  default_prompt: "使用 $medical-sci-finalize，先组装主稿与补充材料 Word，再逐段润色英文并重新组装。"

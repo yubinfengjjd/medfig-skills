@@ -1,0 +1,4 @@
+interface:
+  display_name: "医学 SCI Results 写作"
+  short_description: "依据成图、图例、表格与已确认大纲撰写医学 Results，中英逐段对照并附双语小标题"
+  default_prompt: "使用 $medical-sci-results，依据大纲、成图、图例和表格按顺序撰写 Results，输出英文及逐段中文对照。"
