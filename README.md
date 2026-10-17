@@ -1,8 +1,8 @@
-# medfig 技能集合
+# research-jjd 技能集合
 
 [![tests](https://github.com/yubinfengjjd/research-jjd/actions/workflows/tests.yml/badge.svg)](https://github.com/yubinfengjjd/research-jjd/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-面向医学 / 临床 AI 论文的全流程技能：图表侧是七个 medfig 技能和它们依赖的 `scipilot-medimg-figure-skill`；写作侧是八个 `medical-sci-*` 写作技能和把它们串起来的 `medpaper-pipeline`（含投稿前的 Zotero 参考文献注入）；另有科研开题、受管实验与苏格拉底式项目访谈三个技能。一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
+research-jjd 是面向医学 / 临床 AI 论文的全流程技能集：图表侧是七个 medfig 技能和它们依赖的 `scipilot-medimg-figure-skill`；写作侧是八个 `medical-sci-*` 写作技能和把它们串起来的 `medpaper-pipeline`（含投稿前的 Zotero 参考文献注入）；另有科研开题、受管实验与苏格拉底式项目访谈三个技能。一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
 
 | 技能 | 作用 |
 |---|---|

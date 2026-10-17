@@ -1,6 +1,6 @@
 # NOTICE
 
-medfig-skills 以 MIT 许可证发布（见 `LICENSE`）。以下部分借用或参考了第三方项目：
+research-jjd 以 MIT 许可证发布（见 `LICENSE`）。以下部分借用或参考了第三方项目：
 
 | 来源 | 许可证 | 用在哪里 | 方式 |
 |---|---|---|---|
