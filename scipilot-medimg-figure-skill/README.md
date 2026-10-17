@@ -111,14 +111,14 @@ A [Claude Code](https://claude.com/claude-code) / [Codex](https://github.com/ope
 ### 安装
 
 ```
-请帮我安装这个 Skill：https://github.com/yubinfengjjd/medfig-skills.git（运行仓库里的 install.py）
+请帮我安装这个 Skill：https://github.com/yubinfengjjd/research-jjd.git（运行仓库里的 install.py）
 ```
 
 或手动：
 
 ```bash
-git clone https://github.com/yubinfengjjd/medfig-skills.git
-cd medfig-skills && python install.py
+git clone https://github.com/yubinfengjjd/research-jjd.git
+cd research-jjd && python install.py
 pip install -r scipilot-medimg-figure-skill/requirements.txt
 ```
 
@@ -288,14 +288,14 @@ Full 15 in [`references/viz_pitfalls.md`](references/viz_pitfalls.md).
 ### Installation
 
 ```
-Please install this Skill for me: https://github.com/yubinfengjjd/medfig-skills.git (run install.py in the repo)
+Please install this Skill for me: https://github.com/yubinfengjjd/research-jjd.git (run install.py in the repo)
 ```
 
 Manual:
 
 ```bash
-git clone https://github.com/yubinfengjjd/medfig-skills.git
-cd medfig-skills && python install.py
+git clone https://github.com/yubinfengjjd/research-jjd.git
+cd research-jjd && python install.py
 pip install -r scipilot-medimg-figure-skill/requirements.txt
 ```
 
