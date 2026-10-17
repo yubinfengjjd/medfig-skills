@@ -1,6 +1,6 @@
 """Offline acceptance specification regression tests. All generated files stay in the explicit _tmp work dir."""
 from __future__ import annotations
-import argparse,copy,io,json,sys,unittest,uuid,zipfile
+import argparse,copy,io,json,sys,tempfile,unittest,uuid,zipfile
 from pathlib import Path
 from unittest.mock import patch
 from lxml import etree as E
@@ -14,6 +14,11 @@ from zotero_collect import Local,StopWrite,MetadataConflict,match_item,metadata,
 WORK=None
 BASELINE=Path(__file__).resolve().parents[1]/'assets/baseline-sample.docx'
 class Regression(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        global WORK
+        if WORK is None:
+            WORK = Path(tempfile.mkdtemp(prefix='ref-tests-'))
     def setUp(self):
         self.d=WORK/('t-'+uuid.uuid4().hex[:8]);self.d.mkdir(parents=True)
         self.source=self.d/'Test_Manuscript_v1.docx';self.cand=self.d/'process/candidate.docx';self.doc=Document()
