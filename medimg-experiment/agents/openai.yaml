@@ -1,0 +1,6 @@
+interface:
+  display_name: "医学影像实验"
+  short_description: "按实验矩阵或调优流程运行本地分类/分割实验：划分审计、锁定测试、多seed配对CI、独立审查与归档"
+  default_prompt: "使用 $medimg-experiment 将我的研究计划和可选代码整理为本地实验契约，先核对数据划分与测试集、评价与统计规则、解释器和预算，待我确认后执行。"
+policy:
+  allow_implicit_invocation: true

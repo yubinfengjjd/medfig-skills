@@ -1,0 +1,2534 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Canonical self-contained register schema and unconfirmed starter templates; not a completed research plan or scientific approval.",
+  "instructions": [
+    "Create only the records needed by the current interview phase. When running the checker, all five JSON files must exist; copy each files entry into its named file, not this whole asset.",
+    "All five inputs share one nonempty current version string. Preserve stable unique IDs across registers, unknowns and change records. IDs begin with a letter and contain only letters, digits, underscore, dot, colon or hyphen, at most 64 characters.",
+    "Add completed record_templates to the appropriate records array. Do not count empty prototypes as substantive records. The plan register is flat: every plan record has its exact record_type. Optional extra domain fields are not inferred as hidden rules.",
+    "Record actual USER replies and their scope. ANSWER, delegation, a preselected option or silence never becomes CONFIRM. G1-G3 confirmation is distinct from AUTHORIZE_EXECUTION.",
+    "Optional state.changes records permit explicit carry-forward. Each GATE_CHANGE has id, from_version, to_version, reason, source, affected_gate_ids, preserved_gate_ids, affected_constraint_ids and preserved_constraint_ids. Its gate arrays disjointly partition G1-G3. Constraint arrays contain explicit disjoint CONSTRAINT IDs; G1 preservation does not automatically preserve any constraint.",
+    "Changes form one unambiguous complete chain ending at state.version. An older gate or constraint USER/CONFIRM remains applicable only if every intervening change explicitly preserves that exact decision ID. Retain its original version and original user source. Affected decisions must be INVALIDATED or genuinely reconfirmed; no silent retagging is allowed.",
+    "A changes.source may describe actual user changes or ASSISTANT refinements within an already approved boundary. It records why existing consent remains applicable and never creates a new confirmation or evidence claim. Source authenticity and unchangedness require semantic review.",
+    "Budget rows cover every explicit config_ids item used by TRAINING, ANALYSIS, EVALUATION or PROFILING tasks, once per aggregate maximum-run configuration. Missing coverage is an error. Unconfigured evaluation/profiling costs need review. budget_total_hours is null when relevant coverage or duration is incomplete.",
+    "Unknown forecasts use null bounds, UNKNOWN, a rationale in basis and a registered future PROFILING task in profile_task_id. They may be execution prerequisites; explicitly CRITICAL_SCIENTIFIC forecasts block READY. No GPU, hardware model or training task is mandatory for clinical analysis.",
+    "group_ids, if supplied, are observed pseudonymous identifiers in one comparable namespace. Leave null or omit when unavailable; missing IDs do not prove independence. Never ship patient identifiers in the global skill.",
+    "available_inputs and required_inference_inputs are exact project-defined modality or variable names. Required method inputs must be a subset of every linked dataset available_inputs; no semantic alias matching is performed.",
+    "READY requires applicable genuine G1-G3 USER/CONFIRM records, HANDOFF stage, readable nonempty registered session, main_plan and review artifacts, substantive records and all required sections. Artifact defaults are session.md, project-plan.md and review.md. Explicit CRITICAL_SCIENTIFIC UNKNOWN, CONFLICTED or PROVISIONAL blocks READY. A hypothesis awaiting experiment may be PROVISIONAL with a noncritical impact when its feasibility is established.",
+    "A PASS reports explicit registered structure only. It cannot authenticate sources, confirmations, change scope, scientific adequacy, main-document consistency, independence or real resource feasibility. It never advances state or executes command text.",
+    "Optional state.artifacts maps session, main_plan and review to custom relative .md paths; omitted roles use default names. Absolute/root/drive paths, any .. traversal, non-.md files and symlink/junction escape are rejected. Registered custom artifacts remain protected against forced report overwrite. Artifact existence does not validate its scientific content."
+  ],
+  "schema_dialect": {
+    "type": "object, array, string, integer (not boolean), number (finite, not boolean), boolean, or null",
+    "properties": "Known object fields and their schemas.",
+    "required": "Every listed object key must exist; missing fields, invalid types/enums, NaN/Infinity or duplicate JSON keys give exit 2.",
+    "additional_properties": "Extra domain fields are allowed, but no hidden relationship or scientific check is inferred from them.",
+    "items": "Schema applied to every array item.",
+    "enum": "Exact allowed values, case-sensitive.",
+    "min_length": "A value of 1 rejects empty or whitespace-only identifier strings.",
+    "any_of": "Either null or the single documented non-null schema.",
+    "conditional_variants": "Each plan record is additionally checked against schema.record_variants[record_type]; each non-null constraint validation uses schema.validation_variants[rule_type]."
+  },
+  "schema": {
+    "files": {
+      "state.json": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "enum": [
+              "1.0"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "min_length": 1
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "INTAKE",
+              "INTERVIEW",
+              "POSITIONING",
+              "DESIGN",
+              "REVIEW",
+              "HANDOFF"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "PAUSED_BY_USER",
+              "PROVISIONAL",
+              "READY_FOR_HANDOFF"
+            ]
+          },
+          "gates": {
+            "type": "object",
+            "properties": {
+              "G1": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "UNCONFIRMED",
+                      "CONFIRMED",
+                      "INVALIDATED",
+                      "SUPERSEDED"
+                    ]
+                  },
+                  "version": {
+                    "type": "string",
+                    "min_length": 1
+                  },
+                  "source": {
+                    "any_of": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "USER",
+                              "PUBLIC",
+                              "LOCAL",
+                              "ASSISTANT"
+                            ]
+                          },
+                          "locator": {
+                            "type": "string"
+                          },
+                          "decision": {
+                            "type": "string",
+                            "enum": [
+                              "ANSWER",
+                              "CONFIRM",
+                              "DELEGATE",
+                              "AUTHORIZE_EXECUTION",
+                              "PAUSE"
+                            ]
+                          },
+                          "scope": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "min_length": 1
+                            }
+                          },
+                          "response": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "locator",
+                          "decision",
+                          "scope",
+                          "response"
+                        ],
+                        "additional_properties": true
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "version",
+                  "source"
+                ],
+                "additional_properties": true
+              },
+              "G2": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "UNCONFIRMED",
+                      "CONFIRMED",
+                      "INVALIDATED",
+                      "SUPERSEDED"
+                    ]
+                  },
+                  "version": {
+                    "type": "string",
+                    "min_length": 1
+                  },
+                  "source": {
+                    "any_of": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "USER",
+                              "PUBLIC",
+                              "LOCAL",
+                              "ASSISTANT"
+                            ]
+                          },
+                          "locator": {
+                            "type": "string"
+                          },
+                          "decision": {
+                            "type": "string",
+                            "enum": [
+                              "ANSWER",
+                              "CONFIRM",
+                              "DELEGATE",
+                              "AUTHORIZE_EXECUTION",
+                              "PAUSE"
+                            ]
+                          },
+                          "scope": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "min_length": 1
+                            }
+                          },
+                          "response": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "locator",
+                          "decision",
+                          "scope",
+                          "response"
+                        ],
+                        "additional_properties": true
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "version",
+                  "source"
+                ],
+                "additional_properties": true
+              },
+              "G3": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "UNCONFIRMED",
+                      "CONFIRMED",
+                      "INVALIDATED",
+                      "SUPERSEDED"
+                    ]
+                  },
+                  "version": {
+                    "type": "string",
+                    "min_length": 1
+                  },
+                  "source": {
+                    "any_of": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "USER",
+                              "PUBLIC",
+                              "LOCAL",
+                              "ASSISTANT"
+                            ]
+                          },
+                          "locator": {
+                            "type": "string"
+                          },
+                          "decision": {
+                            "type": "string",
+                            "enum": [
+                              "ANSWER",
+                              "CONFIRM",
+                              "DELEGATE",
+                              "AUTHORIZE_EXECUTION",
+                              "PAUSE"
+                            ]
+                          },
+                          "scope": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "min_length": 1
+                            }
+                          },
+                          "response": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "locator",
+                          "decision",
+                          "scope",
+                          "response"
+                        ],
+                        "additional_properties": true
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "version",
+                  "source"
+                ],
+                "additional_properties": true
+              }
+            },
+            "required": [
+              "G1",
+              "G2",
+              "G3"
+            ],
+            "additional_properties": true
+          },
+          "unknowns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "UNKNOWN",
+                    "CONFLICTED",
+                    "PROVISIONAL"
+                  ]
+                },
+                "impact": {
+                  "type": "string",
+                  "enum": [
+                    "CRITICAL_SCIENTIFIC",
+                    "EXECUTION_PREREQUISITE",
+                    "NONCRITICAL_CHOICE"
+                  ]
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "affected_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                },
+                "next_action": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "impact",
+                "statement",
+                "affected_ids",
+                "next_action"
+              ],
+              "additional_properties": true
+            }
+          },
+          "pause_source": {
+            "any_of": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "USER",
+                      "PUBLIC",
+                      "LOCAL",
+                      "ASSISTANT"
+                    ]
+                  },
+                  "locator": {
+                    "type": "string"
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "ANSWER",
+                      "CONFIRM",
+                      "DELEGATE",
+                      "AUTHORIZE_EXECUTION",
+                      "PAUSE"
+                    ]
+                  },
+                  "scope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  },
+                  "response": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "locator",
+                  "decision",
+                  "scope",
+                  "response"
+                ],
+                "additional_properties": true
+              }
+            ]
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "record_type": {
+                  "type": "string",
+                  "enum": [
+                    "GATE_CHANGE"
+                  ]
+                },
+                "from_version": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "to_version": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "USER",
+                        "PUBLIC",
+                        "LOCAL",
+                        "ASSISTANT"
+                      ]
+                    },
+                    "locator": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "locator",
+                    "summary"
+                  ],
+                  "additional_properties": true
+                },
+                "affected_gate_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "G1",
+                      "G2",
+                      "G3"
+                    ]
+                  }
+                },
+                "preserved_gate_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "G1",
+                      "G2",
+                      "G3"
+                    ]
+                  }
+                },
+                "affected_constraint_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                },
+                "preserved_constraint_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "record_type",
+                "from_version",
+                "to_version",
+                "reason",
+                "source",
+                "affected_gate_ids",
+                "preserved_gate_ids",
+                "affected_constraint_ids",
+                "preserved_constraint_ids"
+              ],
+              "additional_properties": true
+            }
+          },
+          "artifacts": {
+            "type": "object",
+            "properties": {
+              "session": {
+                "type": "string",
+                "min_length": 1
+              },
+              "main_plan": {
+                "type": "string",
+                "min_length": 1
+              },
+              "review": {
+                "type": "string",
+                "min_length": 1
+              }
+            },
+            "required": [],
+            "additional_properties": true
+          }
+        },
+        "required": [
+          "schema_version",
+          "version",
+          "stage",
+          "status",
+          "gates",
+          "unknowns"
+        ],
+        "additional_properties": true
+      },
+      "constraints.json": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "enum": [
+              "1.0"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "min_length": 1
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "HARD",
+                    "TARGET",
+                    "PREFERENCE",
+                    "DEFAULT",
+                    "UNKNOWN"
+                  ]
+                },
+                "category": {
+                  "type": "string"
+                },
+                "evidence_status": {
+                  "type": "string",
+                  "enum": [
+                    "PROVIDED",
+                    "VERIFIED",
+                    "INFERRED",
+                    "PROVISIONAL",
+                    "UNKNOWN",
+                    "CONFLICTED"
+                  ]
+                },
+                "impact": {
+                  "type": "string",
+                  "enum": [
+                    "CRITICAL_SCIENTIFIC",
+                    "EXECUTION_PREREQUISITE",
+                    "NONCRITICAL_CHOICE"
+                  ]
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "USER",
+                        "PUBLIC",
+                        "LOCAL",
+                        "ASSISTANT"
+                      ]
+                    },
+                    "locator": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "locator",
+                    "summary"
+                  ],
+                  "additional_properties": true
+                },
+                "user_confirmation": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "UNCONFIRMED",
+                        "CONFIRMED",
+                        "INVALIDATED",
+                        "SUPERSEDED"
+                      ]
+                    },
+                    "version": {
+                      "type": "string",
+                      "min_length": 1
+                    },
+                    "source": {
+                      "any_of": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "USER",
+                                "PUBLIC",
+                                "LOCAL",
+                                "ASSISTANT"
+                              ]
+                            },
+                            "locator": {
+                              "type": "string"
+                            },
+                            "decision": {
+                              "type": "string",
+                              "enum": [
+                                "ANSWER",
+                                "CONFIRM",
+                                "DELEGATE",
+                                "AUTHORIZE_EXECUTION",
+                                "PAUSE"
+                              ]
+                            },
+                            "scope": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "min_length": 1
+                              }
+                            },
+                            "response": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "locator",
+                            "decision",
+                            "scope",
+                            "response"
+                          ],
+                          "additional_properties": true
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "version",
+                    "source"
+                  ],
+                  "additional_properties": true
+                },
+                "validation": {
+                  "any_of": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object"
+                    }
+                  ]
+                },
+                "affected_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                },
+                "override_history": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "statement",
+                "kind",
+                "category",
+                "evidence_status",
+                "impact",
+                "source",
+                "user_confirmation",
+                "validation",
+                "affected_ids",
+                "override_history"
+              ],
+              "additional_properties": true
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "version",
+          "records"
+        ],
+        "additional_properties": true
+      },
+      "evidence.json": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "enum": [
+              "1.0"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "min_length": 1
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "title": {
+                  "type": "string"
+                },
+                "evidence_status": {
+                  "type": "string",
+                  "enum": [
+                    "PROVIDED",
+                    "VERIFIED",
+                    "INFERRED",
+                    "PROVISIONAL",
+                    "UNKNOWN",
+                    "CONFLICTED"
+                  ]
+                },
+                "impact": {
+                  "type": "string",
+                  "enum": [
+                    "CRITICAL_SCIENTIFIC",
+                    "EXECUTION_PREREQUISITE",
+                    "NONCRITICAL_CHOICE"
+                  ]
+                },
+                "source": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "USER",
+                        "PUBLIC",
+                        "LOCAL",
+                        "ASSISTANT"
+                      ]
+                    },
+                    "locator": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "locator",
+                    "summary"
+                  ],
+                  "additional_properties": true
+                },
+                "verification": {
+                  "any_of": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "scope": {
+                          "type": "string"
+                        },
+                        "location": {
+                          "type": "string"
+                        },
+                        "checked_at": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "scope",
+                        "location",
+                        "checked_at"
+                      ],
+                      "additional_properties": true
+                    }
+                  ]
+                },
+                "supported_claim_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                },
+                "challenged_claim_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "evidence_status",
+                "impact",
+                "source",
+                "verification",
+                "supported_claim_ids",
+                "challenged_claim_ids"
+              ],
+              "additional_properties": true
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "version",
+          "records"
+        ],
+        "additional_properties": true
+      },
+      "data-register.json": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "enum": [
+              "1.0"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "min_length": 1
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "DEVELOPMENT",
+                    "TRAIN",
+                    "TUNING",
+                    "CALIBRATION",
+                    "INTERNAL_TEST",
+                    "EXTERNAL_TEST",
+                    "ANALYSIS"
+                  ]
+                },
+                "uses": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "TRAIN",
+                      "TUNE",
+                      "CALIBRATE",
+                      "THRESHOLD",
+                      "EVALUATE",
+                      "ANALYZE"
+                    ]
+                  }
+                },
+                "available_inputs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                },
+                "evidence_status": {
+                  "type": "string",
+                  "enum": [
+                    "PROVIDED",
+                    "VERIFIED",
+                    "INFERRED",
+                    "PROVISIONAL",
+                    "UNKNOWN",
+                    "CONFLICTED"
+                  ]
+                },
+                "impact": {
+                  "type": "string",
+                  "enum": [
+                    "CRITICAL_SCIENTIFIC",
+                    "EXECUTION_PREREQUISITE",
+                    "NONCRITICAL_CHOICE"
+                  ]
+                },
+                "evidence_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "min_length": 1
+                  }
+                },
+                "independence_unit": {
+                  "type": "string"
+                },
+                "group_ids": {
+                  "any_of": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "min_length": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "version",
+                "role",
+                "uses",
+                "available_inputs",
+                "evidence_status",
+                "impact",
+                "evidence_ids",
+                "independence_unit"
+              ],
+              "additional_properties": true
+            }
+          }
+        },
+        "required": [
+          "schema_version",
+          "version",
+          "records"
+        ],
+        "additional_properties": true
+      },
+      "plan-contract.json": {
+        "type": "object",
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "enum": [
+              "1.0"
+            ]
+          },
+          "version": {
+            "type": "string",
+            "min_length": 1
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "record_type": {
+                  "type": "string",
+                  "enum": [
+                    "METHOD",
+                    "CLAIM",
+                    "EXPERIMENT",
+                    "METRIC",
+                    "TASK",
+                    "CONFIG",
+                    "BUDGET"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "record_type"
+              ],
+              "additional_properties": true
+            }
+          },
+          "sections": {
+            "type": "object",
+            "properties": {
+              "scope": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "question": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "methods": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "analysis": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "statistics": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "trustworthiness": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "positioning": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "consistency": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "engineering": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              },
+              "risks": {
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  },
+                  "ref_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  }
+                },
+                "required": [
+                  "summary",
+                  "ref_ids"
+                ],
+                "additional_properties": true
+              }
+            },
+            "required": [],
+            "additional_properties": true
+          }
+        },
+        "required": [
+          "schema_version",
+          "version",
+          "records",
+          "sections"
+        ],
+        "additional_properties": true
+      }
+    },
+    "record_variants": {
+      "METHOD": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "METHOD"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "dataset_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "required_inference_inputs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          }
+        },
+        "required": [
+          "id",
+          "record_type",
+          "name",
+          "purpose",
+          "dataset_ids",
+          "required_inference_inputs",
+          "evidence_ids"
+        ],
+        "additional_properties": true
+      },
+      "CLAIM": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "CLAIM"
+            ]
+          },
+          "statement": {
+            "type": "string"
+          },
+          "evidence_status": {
+            "type": "string",
+            "enum": [
+              "PROVIDED",
+              "VERIFIED",
+              "INFERRED",
+              "PROVISIONAL",
+              "UNKNOWN",
+              "CONFLICTED"
+            ]
+          },
+          "impact": {
+            "type": "string",
+            "enum": [
+              "CRITICAL_SCIENTIFIC",
+              "EXECUTION_PREREQUISITE",
+              "NONCRITICAL_CHOICE"
+            ]
+          },
+          "method_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "experiment_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "falsification": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "record_type",
+          "statement",
+          "evidence_status",
+          "impact",
+          "method_ids",
+          "evidence_ids",
+          "experiment_ids",
+          "falsification"
+        ],
+        "additional_properties": true
+      },
+      "EXPERIMENT": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "EXPERIMENT"
+            ]
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "BASELINE",
+              "MAIN",
+              "ABLATION",
+              "SENSITIVITY",
+              "EVALUATION",
+              "SEARCH",
+              "DIAGNOSTIC"
+            ]
+          },
+          "claim_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "method_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "dataset_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "metric_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "task_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          }
+        },
+        "required": [
+          "id",
+          "record_type",
+          "purpose",
+          "role",
+          "claim_ids",
+          "method_ids",
+          "dataset_ids",
+          "metric_ids",
+          "task_ids"
+        ],
+        "additional_properties": true
+      },
+      "METRIC": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "METRIC"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "definition": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "aggregation": {
+            "type": "string"
+          },
+          "uncertainty": {
+            "type": "string"
+          },
+          "primary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "record_type",
+          "name",
+          "target",
+          "definition",
+          "unit",
+          "aggregation",
+          "uncertainty",
+          "primary"
+        ],
+        "additional_properties": true
+      },
+      "TASK": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "TASK"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PREPARATION",
+              "TRAINING",
+              "ANALYSIS",
+              "EVALUATION",
+              "PROFILING",
+              "ARCHIVE"
+            ]
+          },
+          "scientific_purpose": {
+            "type": "string"
+          },
+          "claim_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ref_id": {
+                  "type": "string",
+                  "min_length": 1
+                },
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ref_id",
+                "schema"
+              ],
+              "additional_properties": true
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "schema"
+              ],
+              "additional_properties": true
+            }
+          },
+          "scope": {
+            "type": "string"
+          },
+          "planned_files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "config_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "command": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PLANNED",
+                  "NOT_STARTED",
+                  "EXECUTED_UNVERIFIED",
+                  "EXECUTED_VERIFIED"
+                ]
+              },
+              "text": {
+                "type": "string"
+              },
+              "executable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "status",
+              "text",
+              "executable"
+            ],
+            "additional_properties": true
+          },
+          "acceptance": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failure_handling": {
+            "type": "string"
+          },
+          "stop_conditions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "execution_status": {
+            "type": "string",
+            "enum": [
+              "PLANNED",
+              "NOT_STARTED",
+              "EXECUTED_UNVERIFIED",
+              "EXECUTED_VERIFIED"
+            ]
+          },
+          "authorization_status": {
+            "type": "string",
+            "enum": [
+              "NOT_AUTHORIZED",
+              "AUTHORIZED"
+            ]
+          },
+          "authorization_source": {
+            "any_of": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "USER",
+                      "PUBLIC",
+                      "LOCAL",
+                      "ASSISTANT"
+                    ]
+                  },
+                  "locator": {
+                    "type": "string"
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "ANSWER",
+                      "CONFIRM",
+                      "DELEGATE",
+                      "AUTHORIZE_EXECUTION",
+                      "PAUSE"
+                    ]
+                  },
+                  "scope": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "min_length": 1
+                    }
+                  },
+                  "response": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "locator",
+                  "decision",
+                  "scope",
+                  "response"
+                ],
+                "additional_properties": true
+              }
+            ]
+          },
+          "execution_evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          }
+        },
+        "required": [
+          "id",
+          "record_type",
+          "kind",
+          "scientific_purpose",
+          "claim_ids",
+          "depends_on",
+          "inputs",
+          "outputs",
+          "scope",
+          "planned_files",
+          "config_ids",
+          "command",
+          "acceptance",
+          "failure_handling",
+          "stop_conditions",
+          "execution_status",
+          "authorization_status",
+          "authorization_source",
+          "execution_evidence_ids"
+        ],
+        "additional_properties": true
+      },
+      "CONFIG": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "CONFIG"
+            ]
+          },
+          "method_id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "settings": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "record_type",
+          "method_id",
+          "settings"
+        ],
+        "additional_properties": true
+      },
+      "BUDGET": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "BUDGET"
+            ]
+          },
+          "config_id": {
+            "type": "string",
+            "min_length": 1
+          },
+          "runs": {
+            "type": "integer"
+          },
+          "duration_hours": {
+            "type": "object",
+            "properties": {
+              "lower": {
+                "any_of": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              },
+              "upper": {
+                "any_of": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "lower",
+              "upper"
+            ],
+            "additional_properties": true
+          },
+          "memory_gb": {
+            "type": "object",
+            "properties": {
+              "lower": {
+                "any_of": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              },
+              "upper": {
+                "any_of": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "lower",
+              "upper"
+            ],
+            "additional_properties": true
+          },
+          "measurement_status": {
+            "type": "string",
+            "enum": [
+              "ESTIMATED",
+              "REFERENCE_MEASURED",
+              "LOCAL_MEASURED",
+              "UNKNOWN"
+            ]
+          },
+          "basis": {
+            "type": "string"
+          },
+          "profile_task_id": {
+            "any_of": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "string",
+                "min_length": 1
+              }
+            ]
+          },
+          "impact": {
+            "type": "string",
+            "enum": [
+              "CRITICAL_SCIENTIFIC",
+              "EXECUTION_PREREQUISITE",
+              "NONCRITICAL_CHOICE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "record_type",
+          "config_id",
+          "runs",
+          "duration_hours",
+          "memory_gb",
+          "measurement_status",
+          "basis",
+          "profile_task_id",
+          "impact"
+        ],
+        "additional_properties": true
+      }
+    },
+    "validation_variants": {
+      "QUANTITY": {
+        "type": "object",
+        "properties": {
+          "rule_type": {
+            "type": "string",
+            "enum": [
+              "QUANTITY"
+            ]
+          },
+          "record_type": {
+            "type": "string",
+            "enum": [
+              "CONSTRAINT",
+              "EVIDENCE",
+              "DATASET",
+              "METHOD",
+              "CLAIM",
+              "EXPERIMENT",
+              "METRIC",
+              "TASK",
+              "CONFIG",
+              "BUDGET"
+            ]
+          },
+          "target_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "min_length": 1
+            }
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "MIN",
+              "MAX",
+              "EQUAL"
+            ]
+          },
+          "value": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rule_type",
+          "record_type",
+          "target_ids",
+          "operator",
+          "value"
+        ],
+        "additional_properties": true
+      },
+      "NUMBER": {
+        "type": "object",
+        "properties": {
+          "rule_type": {
+            "type": "string",
+            "enum": [
+              "NUMBER"
+            ]
+          },
+          "actual": {
+            "any_of": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "MIN",
+              "MAX",
+              "EQUAL"
+            ]
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "rule_type",
+          "actual",
+          "operator",
+          "value"
+        ],
+        "additional_properties": true
+      }
+    },
+    "user_source": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "USER",
+            "PUBLIC",
+            "LOCAL",
+            "ASSISTANT"
+          ]
+        },
+        "locator": {
+          "type": "string"
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "ANSWER",
+            "CONFIRM",
+            "DELEGATE",
+            "AUTHORIZE_EXECUTION",
+            "PAUSE"
+          ]
+        },
+        "scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "min_length": 1
+          }
+        },
+        "response": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "locator",
+        "decision",
+        "scope",
+        "response"
+      ],
+      "additional_properties": true
+    },
+    "unknown": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "min_length": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "CONFLICTED",
+            "PROVISIONAL"
+          ]
+        },
+        "impact": {
+          "type": "string",
+          "enum": [
+            "CRITICAL_SCIENTIFIC",
+            "EXECUTION_PREREQUISITE",
+            "NONCRITICAL_CHOICE"
+          ]
+        },
+        "statement": {
+          "type": "string"
+        },
+        "affected_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "min_length": 1
+          }
+        },
+        "next_action": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "status",
+        "impact",
+        "statement",
+        "affected_ids",
+        "next_action"
+      ],
+      "additional_properties": true
+    },
+    "gate_change": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "min_length": 1
+        },
+        "record_type": {
+          "type": "string",
+          "enum": [
+            "GATE_CHANGE"
+          ]
+        },
+        "from_version": {
+          "type": "string",
+          "min_length": 1
+        },
+        "to_version": {
+          "type": "string",
+          "min_length": 1
+        },
+        "reason": {
+          "type": "string"
+        },
+        "source": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "USER",
+                "PUBLIC",
+                "LOCAL",
+                "ASSISTANT"
+              ]
+            },
+            "locator": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "locator",
+            "summary"
+          ],
+          "additional_properties": true
+        },
+        "affected_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "G1",
+              "G2",
+              "G3"
+            ]
+          }
+        },
+        "preserved_gate_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "G1",
+              "G2",
+              "G3"
+            ]
+          }
+        },
+        "affected_constraint_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "min_length": 1
+          }
+        },
+        "preserved_constraint_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "min_length": 1
+          }
+        }
+      },
+      "required": [
+        "id",
+        "record_type",
+        "from_version",
+        "to_version",
+        "reason",
+        "source",
+        "affected_gate_ids",
+        "preserved_gate_ids",
+        "affected_constraint_ids",
+        "preserved_constraint_ids"
+      ],
+      "additional_properties": true
+    }
+  },
+  "files": {
+    "state.json": {
+      "schema_version": "1.0",
+      "version": "v1",
+      "stage": "INTAKE",
+      "status": "ACTIVE",
+      "gates": {
+        "G1": {
+          "status": "UNCONFIRMED",
+          "version": "v1",
+          "source": null
+        },
+        "G2": {
+          "status": "UNCONFIRMED",
+          "version": "v1",
+          "source": null
+        },
+        "G3": {
+          "status": "UNCONFIRMED",
+          "version": "v1",
+          "source": null
+        }
+      },
+      "unknowns": [],
+      "changes": [],
+      "artifacts": {}
+    },
+    "constraints.json": {
+      "schema_version": "1.0",
+      "version": "v1",
+      "records": []
+    },
+    "evidence.json": {
+      "schema_version": "1.0",
+      "version": "v1",
+      "records": []
+    },
+    "data-register.json": {
+      "schema_version": "1.0",
+      "version": "v1",
+      "records": []
+    },
+    "plan-contract.json": {
+      "schema_version": "1.0",
+      "version": "v1",
+      "records": [],
+      "sections": {}
+    }
+  },
+  "record_templates": {
+    "CONSTRAINT": {
+      "id": "C001",
+      "statement": "",
+      "kind": "HARD",
+      "category": "",
+      "evidence_status": "UNKNOWN",
+      "impact": "CRITICAL_SCIENTIFIC",
+      "source": {
+        "kind": "USER",
+        "locator": "",
+        "summary": ""
+      },
+      "user_confirmation": {
+        "status": "UNCONFIRMED",
+        "version": "v1",
+        "source": null
+      },
+      "validation": null,
+      "affected_ids": [],
+      "override_history": []
+    },
+    "EVIDENCE": {
+      "id": "E001",
+      "title": "",
+      "evidence_status": "UNKNOWN",
+      "impact": "CRITICAL_SCIENTIFIC",
+      "source": {
+        "kind": "USER",
+        "locator": "",
+        "summary": ""
+      },
+      "verification": null,
+      "supported_claim_ids": [],
+      "challenged_claim_ids": []
+    },
+    "DATASET": {
+      "id": "D001",
+      "name": "",
+      "version": "",
+      "role": "DEVELOPMENT",
+      "uses": [],
+      "available_inputs": [],
+      "evidence_status": "UNKNOWN",
+      "impact": "CRITICAL_SCIENTIFIC",
+      "evidence_ids": [],
+      "independence_unit": "",
+      "group_ids": null
+    },
+    "METHOD": {
+      "id": "M001",
+      "record_type": "METHOD",
+      "name": "",
+      "purpose": "",
+      "dataset_ids": [],
+      "required_inference_inputs": [],
+      "evidence_ids": []
+    },
+    "CLAIM": {
+      "id": "CL001",
+      "record_type": "CLAIM",
+      "statement": "",
+      "evidence_status": "PROVISIONAL",
+      "impact": "CRITICAL_SCIENTIFIC",
+      "method_ids": [],
+      "evidence_ids": [],
+      "experiment_ids": [],
+      "falsification": ""
+    },
+    "EXPERIMENT": {
+      "id": "X001",
+      "record_type": "EXPERIMENT",
+      "purpose": "",
+      "role": "BASELINE",
+      "claim_ids": [],
+      "method_ids": [],
+      "dataset_ids": [],
+      "metric_ids": [],
+      "task_ids": []
+    },
+    "METRIC": {
+      "id": "MT001",
+      "record_type": "METRIC",
+      "name": "",
+      "target": "",
+      "definition": "",
+      "unit": "",
+      "aggregation": "",
+      "uncertainty": "",
+      "primary": false
+    },
+    "TASK": {
+      "id": "T001",
+      "record_type": "TASK",
+      "kind": "PREPARATION",
+      "scientific_purpose": "",
+      "claim_ids": [],
+      "depends_on": [],
+      "inputs": [],
+      "outputs": [],
+      "scope": "",
+      "planned_files": [],
+      "config_ids": [],
+      "command": {
+        "status": "PLANNED",
+        "text": "",
+        "executable": false
+      },
+      "acceptance": [],
+      "failure_handling": "",
+      "stop_conditions": [],
+      "execution_status": "PLANNED",
+      "authorization_status": "NOT_AUTHORIZED",
+      "authorization_source": null,
+      "execution_evidence_ids": []
+    },
+    "CONFIG": {
+      "id": "CFG001",
+      "record_type": "CONFIG",
+      "method_id": "",
+      "settings": {}
+    },
+    "BUDGET": {
+      "id": "B001",
+      "record_type": "BUDGET",
+      "config_id": "",
+      "runs": 1,
+      "duration_hours": {
+        "lower": null,
+        "upper": null
+      },
+      "memory_gb": {
+        "lower": null,
+        "upper": null
+      },
+      "measurement_status": "UNKNOWN",
+      "basis": "",
+      "profile_task_id": null,
+      "impact": "EXECUTION_PREREQUISITE"
+    }
+  },
+  "auxiliary_templates": {
+    "user_source": {
+      "kind": "USER",
+      "locator": "",
+      "decision": "ANSWER",
+      "scope": [],
+      "response": ""
+    },
+    "unknown": {
+      "id": "UNK001",
+      "status": "UNKNOWN",
+      "impact": "CRITICAL_SCIENTIFIC",
+      "statement": "",
+      "affected_ids": [],
+      "next_action": ""
+    },
+    "section": {
+      "summary": "",
+      "ref_ids": []
+    },
+    "quantity_validation": {
+      "rule_type": "QUANTITY",
+      "record_type": "DATASET",
+      "target_ids": [],
+      "operator": "MIN",
+      "value": 0
+    },
+    "number_validation": {
+      "rule_type": "NUMBER",
+      "actual": null,
+      "operator": "MAX",
+      "value": 0
+    },
+    "gate_change": {
+      "id": "CH001",
+      "record_type": "GATE_CHANGE",
+      "from_version": "v1",
+      "to_version": "v2",
+      "reason": "",
+      "source": {
+        "kind": "ASSISTANT",
+        "locator": "",
+        "summary": ""
+      },
+      "affected_gate_ids": [
+        "G3"
+      ],
+      "preserved_gate_ids": [
+        "G1",
+        "G2"
+      ],
+      "affected_constraint_ids": [],
+      "preserved_constraint_ids": []
+    },
+    "artifacts": {
+      "session": "session.md",
+      "main_plan": "project-plan.md",
+      "review": "review.md"
+    }
+  },
+  "required_ready_sections": [
+    "scope",
+    "question",
+    "data",
+    "methods",
+    "analysis",
+    "statistics",
+    "trustworthiness",
+    "positioning",
+    "consistency",
+    "engineering",
+    "risks"
+  ],
+  "foreign_keys": {
+    "constraint.affected_ids / unknown.affected_ids / section.ref_ids / task.inputs[].ref_id": "Any registered ID (including unknowns).",
+    "evidence.supported_claim_ids / evidence.challenged_claim_ids / experiment.claim_ids / task.claim_ids": "CLAIM IDs.",
+    "dataset.evidence_ids / method.evidence_ids / claim.evidence_ids / task.execution_evidence_ids": "EVIDENCE IDs.",
+    "method.dataset_ids / experiment.dataset_ids": "DATASET IDs.",
+    "claim.method_ids / experiment.method_ids / config.method_id": "METHOD IDs.",
+    "claim.experiment_ids": "EXPERIMENT IDs.",
+    "experiment.metric_ids": "METRIC IDs.",
+    "experiment.task_ids / task.depends_on / budget.profile_task_id": "TASK IDs; an unknown budget profile target must have kind PROFILING.",
+    "task.config_ids / budget.config_id": "CONFIG IDs.",
+    "constraint.validation.target_ids": "IDs of the explicit QUANTITY rule record_type. Unique valid IDs count; duplicates never inflate a quantity.",
+    "change.affected_constraint_ids / change.preserved_constraint_ids": "CONSTRAINT IDs. Exact explicit preservation is required to carry each old confirmation; constraint scopes must be disjoint.",
+    "change.affected_gate_ids / change.preserved_gate_ids": "Exact G1/G2/G3 values. These arrays disjointly partition all three gates for every version transition."
+  },
+  "report_contract": {
+    "fields": [
+      "schema_version",
+      "checked_at",
+      "input_version",
+      "structural_status",
+      "errors",
+      "warnings",
+      "needs_review",
+      "checks_run",
+      "checks_skipped",
+      "limitations"
+    ],
+    "structural_status": [
+      "PASS",
+      "FAIL",
+      "OPERATIONAL_ERROR"
+    ],
+    "issue_fields": [
+      "code",
+      "path",
+      "message"
+    ],
+    "optional_derived_field": "budget_total_hours is runs-times-duration over registered budget rows, or null if duration or relevant task configuration coverage is incomplete. budget_config_coverage records required_ids, covered_ids, missing_ids, unconfigured_task_ids and complete. These fields do not prove complete real computation costs.",
+    "exit_codes": {
+      "0": "Explicit registered structure passes. Scientific review remains.",
+      "1": "Directly registered relationship/rule error.",
+      "2": "Input, JSON, schema or output operational error."
+    },
+    "output_policy": "Inputs and default/custom registered project artifacts remain read-only. Reject report destinations aliasing protected inputs, including symlinks/hardlinks. Existing reports require --force. Publish an atomic UTF-8 report; failure preserves existing inputs and reports."
+  },
+  "limitations": [
+    "A PASS means explicit registered structure passes; it does not establish scientific validity or readiness of real execution resources.",
+    "Submitted USER/CONFIRM provenance cannot be authenticated by this checker; inspect the actual user reply and its scope in the registered session artifact.",
+    "GATE_CHANGE records only register continued applicability of original consent; their source, unchanged scope, and affected/preserved decisions require semantic review and cannot create new confirmation.",
+    "No source authenticity, literature novelty, label quality, clinical value, statistical adequacy, or real resource feasibility is scientifically validated.",
+    "Observed group IDs are compared only within their submitted namespace; missing identifiers and different identifier encodings do not prove independence.",
+    "No natural-language inference, semantic word matching, network access, command execution, data analysis, or training is performed."
+  ]
+}

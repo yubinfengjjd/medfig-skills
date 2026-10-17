@@ -1,6 +1,6 @@
 ---
 name: medical-sci-discussion
-description: "Use when drafting or revising the Discussion of a medical SCI manuscript after its Methods, Results, figure legends and Introduction are all written, such as 写讨论、Discussion 撰写、SCI 讨论中英对照、修改已有讨论、讨论补文献和 PMID、写局限性. Produces an English Discussion (summary, interpretation, comparison with literature, contribution, limitations and future work, short conclusion) with Chinese parallel text, verified PMID citations, no new results and no claims beyond the evidence, plus a Chinese 核查说明 with a finding-to-discussion map and citation table. Refuses to start until all four prerequisite sections exist. Do not use for Methods, Results, Introduction, Abstract or figure legends (use medical-sci-methods / -results / -introduction / -legends), outline building or drawing figures."
+description: Use when drafting or revising the Discussion of a medical SCI manuscript after its Methods, Results, figure legends and Introduction are all written, such as 写讨论、Discussion 撰写、SCI 讨论中英对照、修改已有讨论、讨论补文献和 PMID、写局限性. Produces an English Discussion (summary, interpretation, comparison with literature, contribution, limitations and future work, short conclusion) with Chinese parallel text, verified PMID citations, no new results and no claims beyond the evidence, plus a Chinese 核查说明 with a finding-to-discussion map and citation table. Refuses to start until all four prerequisite sections exist. Do not use for Methods, Results, Introduction, Abstract or figure legends (use medical-sci-methods / -results / -introduction / -legends), outline building or drawing figures.
 ---
 
 # 医学 SCI 讨论写作
@@ -9,7 +9,7 @@ description: "Use when drafting or revising the Discussion of a medical SCI manu
 
 ## 必读材料（每次起草或修订都执行）
 
-不凭技能名称或上次任务的摘要开始写作。按顺序完整读取：
+不凭技能名称或上次任务的摘要开始写作。用 Read 按顺序完整读取：
 
 1. [原始提示词](references/original-discussion-prompt.md)：基础角色与写作要求，以及作者确认的改动。
 2. [已确认写作规则](references/writing-rules.md)：对原始提示词的细化，冲突时以它为准。
@@ -21,15 +21,15 @@ description: "Use when drafting or revising the Discussion of a medical SCI manu
 
 ## 工作流程
 
-1. **前置检查（硬门槛）**：确认 Methods、Results、图注、Introduction 四份都存在且完整（规则第 1 节）。缺任一份或有占位未补时，列出缺项（文件、段落）和建议使用的技能，然后停止，不起草任何段落，作者坚持也不写。目标期刊、引用格式缺失不阻塞，记录将采用默认策略。
+1. **前置检查（硬门槛）**：确认 Methods、Results、图注、Introduction 四份都存在且完整（规则第 1 节）。缺任一份或有占位未补时，列出缺项（文件、段落）和建议使用的技能，然后停止，不起草任何段落，作者坚持也不写。目标期刊、引用格式缺失不阻塞，记录将采用默认策略。 从工作目录或材料路径向上找到 PROJECT.md，读取“写作目标”的本节配额和目标期刊；缺 PROJECT 或缺该小节时采用缺省并在核查说明中说明，缺个别字段时仅该字段用缺省。作者可随时修改；不新建 PROJECT.md。配额读取与统计约定见 medpaper-pipeline/references/citation-quotas.md。
 2. **通读与提取**：读 Introduction 的研究空白与问题、Results 全文与图注、Methods 的设计和数据条件；列出每个研究问题对应的 Results 发现、例外和不利结果（规则第 3 节）。
 3. **选重点、搭论证线**：在内部选出 2–4 个核心发现，为每个写好“发现 → 解释 → 依据 → 文献对比 → 含义”；列出局限清单（规则第 7 节）。先拟好核查说明第 3 部分的对应表，再动笔。
-4. **建文献池**：先复用 Introduction 和 Methods 已核验的文献，逐条重新核对；不足时按论证需要检索 PubMed 补充（规则第 8 节）。PMID 用 curl 查 Europe PMC REST API，NCBI E-utilities 作备用；DOI 用 Crossref（带 `mailto` 参数）。curl 因 TLS 或证书错误失败时，改用带 OpenSSL 的 Python（urllib）发送同样的请求。读摘要确认支持关系后才放入候选。只提交公开主题词和标识，不提交稿件正文、数据或代码。中间结果放在临时目录。
+4. **建文献池**：先复用 Introduction 和 Methods 已核验的文献，逐条重新核对；不足时按论证需要检索 PubMed 补充（规则第 8 节）。PMID 用 WebFetch 或 curl 查 Europe PMC REST API，NCBI E-utilities 作备用；DOI 用 Crossref（带 `mailto` 参数）。curl 因 TLS 或证书错误失败时，改用带 OpenSSL 的 Python（urllib）发送同样的请求。读摘要确认支持关系后才放入候选。只提交公开主题词和标识，不提交稿件正文、数据或代码。中间结果放在临时目录。
 5. **撰写英文**：默认无小标题，五部分加结论段（规则第 2 节）；推断强度按规则第 4 节，语言按 journal-style 第 1 节。
 6. **撰写中文对照**：逐段重组为规范中文，事实、数字、引用、对冲强度与英文一致（规则第 9 节）。
 7. **复核**：用本地脚本统计词数和引用数，逐个数字对照 Results 原文，再按下方“交付前检查”逐项确认，写核查说明（规则第 10 节）。
 
-默认在当前会话中完成，不派出子代理。
+默认在当前对话中完成，不派出子代理。用户明确要求并行或隔离测试时除外。
 
 ## 项目约定（检测到 PROJECT.md 时）
 
@@ -47,13 +47,15 @@ description: "Use when drafting or revising the Discussion of a medical SCI manu
 
 ## 输出
 
-- 单独保存时，输出到用户指定目录：`Discussion_EN.md`、`Discussion_ZH.md`、`Discussion_EN_ZH.md`、`Discussion_核查说明.md`（每次都输出）。
-- 只在会话中交付时，先给英文，再给中文，核查说明放在独立说明块。
+- 单独保存时，用 Write 输出到用户指定目录：`Discussion_EN.md`、`Discussion_ZH.md`、`Discussion_EN_ZH.md`、`Discussion_核查说明.md`（每次都输出）。
+- 只在对话中交付时，先给英文，再给中文，核查说明放在独立说明块。
 - 交付时报告英文词数（口径见 journal-style 第 4 节）、展开讨论的核心发现数、局限条数、引用总数及 PMID 数、降级引用数、`[citation needed]` 数，以及需作者裁决的事项条数。
 - 前置检查未通过时，只输出缺项清单，不生成任何稿件文件。
 - 不在稿件目录留下处理脚本或检索缓存；不修改技能目录、全局配置、大纲、Methods、Results、图注、Introduction 或数据（项目约定下按一致性防线修复事实类冲突除外）。
 
 ## 交付前检查
+
+- [ ] 散文分号链 0 处（同句 ≥2 个散文分号为 ERROR，结构性分号豁免）；目标平均 18–28 词/句，一般 ≤45 词、硬上限 60 词，>45 词占比 >10% 为 WARN；无连续 ≥3 个 <8 词短句的电报体连跑；WARN 已逐条说明。连接词按逻辑需要使用，不连续三句以上以同一个连接词或短语开头；按 journal-style 的「句长、分号与衔接」复核。
 
 - [ ] Methods、Results、图注、Introduction 四份齐全且无占位；否则未起草。
 - [ ] 五部分（总结、解释、文献对比、贡献、局限与未来方向）都出现，加 2–4 句结论段；默认无小标题；结论段没有新内容、新引用或新数字。
@@ -66,11 +68,13 @@ description: "Use when drafting or revising the Discussion of a medical SCI manu
 - [ ] 解释段末没有泛化复述句，以 Together / therefore 收尾的段落 ≤1；First/Second 式路标只用于局限段。
 - [ ] “would test / distinguish”式检验建议 ≤3 处；正文不提及其他章节（the Introduction / Methods / Results）。
 - [ ] 没有 prove、confirm（本研究假设）、establish、for the first time、novel、clearly；没有观察性设计下的因果和定位动词；对冲不叠用；“to our knowledge”最多一处。
-- [ ] 每个核心发现至少一处与最接近已有研究的具体比较（对方条件与发现、本研究不同之处、可核对的可能原因）；没有笼统的 “consistent with previous studies”；只比较定义一致的数字。
+- [ ] 每个展开讨论的核心发现至少 2 篇直接相关文献与最接近已有研究的具体比较（对方条件与发现、本研究不同之处、可核对的可能原因）；没有笼统的 “consistent with previous studies”；只比较定义一致的数字。
 - [ ] 贡献与 Introduction 的空白一一对应，写明对谁、在哪个环节有用；临床意义没有材料不支持的外推，“需前瞻验证”只写一次。
 - [ ] 局限 ≥3 条，按影响排序，每条写明影响哪个结论及本研究的应对或未来方向；覆盖设计、样本或数据、分析方法中的至少两类；不利结果没有回避；没有无依据的 “robust” 找补；没有 “further studies are needed” 式空话。
 - [ ] 每条 PMID 的题名、第一作者、期刊、年份已核对，摘要支持所引论断；他人的数字出自所引文献；PMID 紧跟所支持的研究；`[citation needed]` 只在检索后确无可核实文献时使用并列入核查说明。
+- [ ] 已核验不同 PMID 数已与 PROJECT.md Discussion 配额对照（缺省 ≥20）；核查说明列明实际 vs 目标、缺口与检索主题，不足不停工、不凑数。
 - [ ] 引用格式为纯文本 `(PMID: …)`；降级引用按 DOI > URL > arXiv；没有影响因子或分区；没有声称符合某具体期刊（用户未指定时）。
-- [ ] 英文约 800–1,500 词（或更严格的期刊限制），单句不超过 50 词；美式拼写；术语、缩写、模型和队列名称与 Methods、Results、口径表一致；没有内部标识或工程词汇。
+- [ ] 英文约 800–1,500 词（或更严格的期刊限制），单句硬上限 60 词；美式拼写；术语、缩写、模型和队列名称与 Methods、Results、口径表一致；没有内部标识或工程词汇。
 - [ ] 中文对照按中文语序重组，事实、数字、引用、对冲强度与英文一致，引用用全角括号。
 - [ ] 核查说明五部分齐全：需作者裁决事项、合规说明、发现—讨论对应表（含数字核对）、引用核验表、检索记录。
+- [ ] 引用核验表建议：完成元数据及支持关系核验后，状态以“已核验”开头，未完成写“暂未核验”；正文用途建议标注“（综述层）”。兼容旧自由文本的“已核验”/“已核对”/verified及“综述”/review，否定优先；未识别状态按未核验并在WARN附原文片段。

@@ -7,6 +7,7 @@ import argparse
 import json
 import re
 from pathlib import Path
+from style_check import analyze_style
 
 DEFAULT_HEADINGS = ('Background', 'Methods', 'Results', 'Conclusions')
 
@@ -42,10 +43,20 @@ def analyze(text, limit=250, headings=DEFAULT_HEADINGS):
         errors.append(f'Body word count {body_count} exceeds limit {limit}')
     result_body = next((body for name, body in sections.items() if name.casefold() == expected[2]), '')
     sentence_count = len([s for s in re.split(r'(?<=[.!?])\s+(?=[A-Z])', result_body) if s.strip()]) if result_body else 0
-    return {'words_body': body_count, 'words_with_headings': body_count + heading_count,
+    # Only the four selected body sections participate; ancillary text is excluded.
+    # Mask unselected content while preserving the input's line/character offsets.
+    chars = ['\n' if c == '\n' else ' ' for c in text]
+    for i, mark in selected:
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(text)
+        chars[mark.start():end] = text[mark.start():end]
+    style_text = ''.join(chars)
+    style = analyze_style(style_text, 'abstract')
+    errors.extend(f['rule']+': '+f['msg'] for f in style['findings'] if f['level'] == 'ERROR')
+    warnings = [f['rule']+': '+f['msg'] for f in style['findings'] if f['level'] == 'WARN']
+    return {'style': style, 'warnings': warnings, 'words_body': body_count, 'words_with_headings': body_count + heading_count,
             'word_limit': limit, 'section_words': {name: len(body.split()) for name, body in sections.items()},
             'results_sentences_estimate': sentence_count, 'errors': errors,
-            'manual_checks': ['Confirm 3-5 Results sentences; abbreviations may affect the estimate',
+            'manual_checks': ['Confirm 4-6 Results sentences (or natural sentences within the word limit); no semicolon chains; abbreviations may affect the estimate',
                               'Check all facts, numbers, uncertainty, claim strength and EN/ZH alignment against sources',
                               'Confirm every major analysis family (transfer / explanation / uncertainty / secondary '
                               'endpoints, as present in the manuscript) appears in Methods and in Results; numbers '

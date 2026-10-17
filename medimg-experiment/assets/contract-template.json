@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "study_id": null,
+  "task": null,
+  "mode": null,
+  "hypothesis": null,
+  "plan_path": null,
+  "stages": [],
+  "matrix": {
+    "reference": null,
+    "entries": []
+  },
+  "code": {
+    "source_root": null,
+    "files": []
+  },
+  "primary_metric": {
+    "name": null,
+    "direction": null,
+    "selection": null,
+    "target": null,
+    "min_effect": null
+  },
+  "guard_metrics": [],
+  "baseline": {
+    "source": null,
+    "strength_rationale": null,
+    "tuning_parity": null
+  },
+  "data": {
+    "paths": [],
+    "labels_source": null,
+    "split_reference": null,
+    "group_unit": null,
+    "evaluation_protocol": null
+  },
+  "split_audit": {
+    "command": [],
+    "timeout_seconds": null
+  },
+  "test": {
+    "policy": null,
+    "reference": null,
+    "command": [],
+    "timeout_seconds": null,
+    "rationale": null
+  },
+  "scope": {
+    "editable_paths": [],
+    "parameters": [],
+    "frozen_paths": []
+  },
+  "anomaly": {
+    "max_drop": null,
+    "unit": null,
+    "warmup_steps": null,
+    "consecutive_outside_range": null,
+    "reference_ranges": {}
+  },
+  "budget": {
+    "total_seconds": null,
+    "run_timeout_seconds": null,
+    "max_candidates": null,
+    "max_no_improvement": null
+  },
+  "verification": {
+    "seeds": [],
+    "aggregation": null,
+    "normal_range": [null, null],
+    "max_std": null,
+    "ci": {
+      "method": "paired_bootstrap",
+      "statistic": null,
+      "resamples": null,
+      "level": null,
+      "seed": null,
+      "lower_bound_rule": null
+    }
+  },
+  "environment": {
+    "python": null,
+    "device": null,
+    "dependencies": {},
+    "min_free_bytes": null
+  },
+  "retention": {
+    "mode": "necessary"
+  }
+}

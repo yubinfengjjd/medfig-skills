@@ -5,7 +5,7 @@ Usage:
   section: methods | legends | results | introduction | discussion | abstract
 
 Checks the countable rules written in each skill's writing-rules / journal-style: word count,
-sentence length, banned words, template-phrase frequency, citation format, PMID threshold, EN/ZH
+sentence length, banned words, template-phrase frequency, citation format, verified citation soft quotas, EN/ZH
 PMID and number parity, numbers against Results, figure-panel letter case.
 ERROR = rule violation to fix; WARN = judgment call, record the decision in the 核查说明.
 Exit code 1 if any ERROR. Argument quality, citation support and factual correctness are not checked.
@@ -16,6 +16,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
+from style_check import analyze_style
 
 E, W = "ERROR", "WARN"
 
@@ -30,20 +31,20 @@ COMMON = [
 ]
 
 PROFILES = {
-    "abstract": dict(words=(None, 250, E), sent=(40, 50, E), rules=[
+    "abstract": dict(words=(None, 250, E), rules=[
         (E, "overclaim", r"\b(?:prove[sd]?|proven|clearly|undoubtedly|clinically deployable)\b", 0,
          "摘要结论强度超越证据"),
         (E, "abstract-reference", r"(?:PMID|DOI|URL|arXiv)\s*:|\b(?:Fig\.|Figure|Table)\s*S?\d|\[citation needed\]", 0,
          "摘要默认不带引用、图表号或引用占位"),
     ]),
-    "methods": dict(words=(2500, 3000, W), sent=(40, 50, W), rules=[]),
-    "legends": dict(words=None, legend_words=150, sent=(35, 45, E), rules=[
+    "methods": dict(words=(2500, 3000, W), rules=[]),
+    "legends": dict(words=None, legend_words=150, rules=[
         (E, "comparison-word", r"\b(?:superior|outperform\w*|favou?r(?:s|ed)?|advantage)\b", 0,
          "比较方向词；改为 positive/negative 或写出数值"),
         (W, "disclaimer", r"\b(?:do(?:es)? not establish|not significant overall|not clinical)\b", 0, "通用免责句"),
     ]),
-    "results": dict(words=(3500, 4000, W), sent=(45, 55, E), long_share=0.05, rules=[
-        (E, "sentence-opener", r"(?:^|(?<=[.!?]\s))(?:First|Then|Next|Finally|Moreover|Furthermore|In addition|"
+    "results": dict(words=(3500, 4000, W), rules=[
+        (E, "sentence-opener", r"(?:^|(?<=[.!?]\s))(?:First|Then|Next|Finally|"
          r"Notably|Interestingly|Importantly)\b", 0, "句首串联或强调词"),
         (E, "section-number", r"\bSection \d|\d\.\d+ ?节|上一节", 0, "正文出现节号"),
         # 风格上限：规则写得较死，实际交付稿可能因体量自然超出，按警告报告，由作者定夺
@@ -53,7 +54,7 @@ PROFILES = {
         (W, "accompanied", r"\baccompanied\b", 3, "accompanied 同一词 ≤3"),
         (W, "separating", r"\bseparating\b", 3, "separating 同一词 ≤3"),
     ]),
-    "introduction": dict(words=(None, 1000, E), sent=(40, 50, E), min_pmid=10, rules=[
+    "introduction": dict(words=(None, 1200, E), rules=[
         (E, "to-our-knowledge", r"\bto our knowledge\b", 1, "“to our knowledge” 全文 ≤1"),
         (E, "negative-gap", r"\b(?:do|does|did) not (?:establish|show|demonstrate|determine)\b|\bcannot\b|\bneither\b", 2,
          "否定式空白句 ≤2"),
@@ -63,7 +64,7 @@ PROFILES = {
         (E, "roadmap", r"\b(?:rest|remainder) of this (?:paper|article)\b|\bis organized as follows\b", 0, "路标式结构说明"),
         (W, "result-verb", r"\bwe (?:show|demonstrate|reveal|confirm|establish)\b", 0, "可能提前披露结果"),
     ]),
-    "discussion": dict(words=(800, 1500, W), sent=(40, 50, E), rules=[
+    "discussion": dict(words=(800, 1500, W), rules=[
         (E, "overclaim", r"\b(?:prove[sd]?|proven|clearly|undoubtedly)\b", 0, "超越证据的强度词"),
         (W, "confirm", r"\bconfirm(?:s|ed)? (?:that|our)\b", 0, "confirm 指本研究假设时改为 support/indicate"),
         (E, "to-our-knowledge", r"\bto our knowledge\b", 1, "“to our knowledge” 全文 ≤1"),
@@ -156,15 +157,10 @@ def check(section, en_path, zh_path=None, results_path=None, abstract_limit=250,
             hi = abstract_limit
         if (lo and n < lo) or (hi and n > hi):
             add(lvl, "word-count", f"英文正文 {n} 词，目标 {lo or '—'}–{hi}")
-    # sentence length
-    soft, hard, lvl = prof["sent"]
-    sents = sentences(body)
-    long_ = [s for s in sents if len(s.split()) > soft]
-    for s in sents:
-        if len(s.split()) > hard:
-            add(lvl, "sentence-hard", f"单句 {len(s.split())} 词，超过硬上限 {hard}", s)
-    if "long_share" in prof and sents and len(long_) / len(sents) > prof["long_share"]:
-        add(E, "sentence-share", f"超过 {soft} 词的句子占 {len(long_)}/{len(sents)}，超过 {prof['long_share']:.0%}")
+    # Shared style policy replaces legacy per-section 45/50/55-word caps.
+    # Use raw Markdown so headings/boundaries and source locations remain available.
+    style_text = abstract_body(raw) if section == "abstract" else raw
+    out.extend(analyze_style(style_text, section)["findings"])
     # phrase rules
     for level, rule, pat, mx, msg in COMMON + prof["rules"]:
         if section == "abstract" and rule == "abstract-reference" and allow_abstract_references:
@@ -177,8 +173,10 @@ def check(section, en_path, zh_path=None, results_path=None, abstract_limit=250,
     for m in BAD_PMID.finditer(claims):
         add(E, "pmid-format", "PMID 格式应为 (PMID: 12345678)", claims[max(0, m.start() - 20):m.end() + 20])
     pmids = PMID.findall(claims)
-    if prof.get("min_pmid") and len(set(pmids)) < prof["min_pmid"]:
-        add(E, "pmid-count", f"不同 PMID {len(set(pmids))} 篇，少于 {prof['min_pmid']}")
+    if section in ("introduction", "discussion"):
+        from citation_stats import check_section_quota
+        for finding in check_section_quota(section, en_path):
+            add(W, finding["rule"], finding["msg"])
     dup = [p for p, c in Counter(pmids).items() if c > 1]
     if dup and section in ("introduction", "discussion"):
         add(W, "pmid-repeat", f"同一 PMID 重复引用：{', '.join(dup)}（一般只在最相关处引一次）")

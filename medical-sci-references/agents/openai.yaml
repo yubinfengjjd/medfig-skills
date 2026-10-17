@@ -1,0 +1,4 @@
+interface:
+  display_name: "医学参考文献收集与注入"
+  short_description: "Collect references in Zotero and insert native Word fields"
+  default_prompt: "Use $medical-sci-references to collect the main manuscript references into Zotero, inject native citation fields, and check every insertion."

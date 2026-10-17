@@ -86,7 +86,7 @@ class ManuscriptChecks(unittest.TestCase):
         self.assertEqual(mc.words_of("(a) one two (b) three (a–c) four"), 4)
 
     def test_sentence_hard_cap(self):
-        en = make_project({"D.md": "**Figure 1. Title.** (a) " + "word " * 46 + "end.\n"}) / "D.md"
+        en = make_project({"D.md": "**Figure 1. Title.** (a) " + "word " * 61 + "end.\n"}) / "D.md"
         res = mc.check("legends", en)
         self.assertTrue(any(r["rule"] == "sentence-hard" and r["level"] == mc.E for r in res), res)
 

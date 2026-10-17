@@ -1,0 +1,40 @@
+def add_table(doc, key, model, warnings=None, information=None, layouts=None):
+    parsed = list(md_tables(read(model['tables'][key])))
+    if len(parsed) != 1: raise ValueError(f'Table {key}: expected one Markdown table')
+    headers, rows = parsed[0]
+    columns = [[cell_display(t) for t in col] for col in zip(headers, *rows)]
+    layout, widths = table_layout(columns, Cm(14.6).pt)
+    layout = dict(table=key, **layout)
+    if layouts is not None: layouts.append(layout)
+    if information is not None: information.append(f'Table {key}: {layout["font_size_pt"]} pt; single table')
+    if layout['word_wrap_columns'] and warnings is not None:
+        warnings.append(table_wrap_warning(layout))
+    caption = model['table_captions'][key]; end = caption_title_end(caption)
+    add_caption(doc, caption, title_only=True)
+    table = doc.add_table(rows=1, cols=len(headers)); table.style = 'Table Grid'
+    table.autofit = False
+    tbl_width = table._tbl.tblPr.find(qn('w:tblW')); tbl_width.set(qn('w:type'), 'dxa')
+    tbl_width.set(qn('w:w'), str(sum(w.twips for w in widths)))
+    for column, width in zip(table.columns, widths): column.width = width
+    repeat = OxmlElement('w:tblHeader'); table.rows[0]._tr.get_or_add_trPr().append(repeat)
+    for row_index, values in enumerate([headers, *rows]):
+        cells = table.rows[0].cells if row_index == 0 else table.add_row().cells
+        # No cantSplit and no paragraph keepNext: allow natural cross-page rows.
+        for cell, value, width in zip(cells, values, widths):
+            cell.width = width; paragraph = cell.paragraphs[0]
+            paragraph.paragraph_format.line_spacing = 1
+            paragraph.paragraph_format.keep_with_next = False
+            paragraph.paragraph_format.keep_together = False
+            wrap = OxmlElement('w:wordWrap'); wrap.set(qn('w:val'), '1')
+            paragraph._p.get_or_add_pPr().append(wrap)
+            add_inline(paragraph, value, decode_escapes=True)
+            for run in paragraph.runs:
+                run.font.size = Pt(layout['font_size_pt']); run.font.name = 'Arial'
+            for math_run in paragraph._p.iter(qn('m:r')):
+                props = math_run.find(qn('w:rPr')); sz = OxmlElement('w:sz')
+                sz.set(qn('w:val'), str(round(layout['font_size_pt']*2))); props.append(sz)
+    if caption[end:]:
+        p = doc.add_paragraph(style='Caption'); add_inline(p, caption[end:])
+        for run in p.runs: run.bold = False
+    return layout
+

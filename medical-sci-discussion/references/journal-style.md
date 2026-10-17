@@ -7,11 +7,11 @@
 - 美式拼写，全文统一（tumor、edema、modeling、center）；专有名词和引用题名保留原拼写。
 - 时态：本研究的发现用一般过去时（the model retained …；accuracy was lower on …）；对发现的解释和公认事实用一般现在时（this suggests …；OCT is …）；描述既往研究用一般过去时或现在完成时（Smith et al. reported …；Several studies have shown …）。
 - 缩写与 Methods、Introduction 一致；Discussion 中不重新定义已定义过的缩写，期刊要求各节重新定义时除外。模型、队列、指标和分析的名称与 Methods、Results 及口径表一致，不另起名称。
-- 句长：英文单句一般不超过 40 词，硬上限 50 词（冒号或分号引出的列举除外）。
+- 句长和分号按下方「句长、分号与衔接」执行。
 - 不用工程或项目管理词汇（pipeline 作为比喻、audit、ledger、wave、run、frozen endpoint 等内部标识）；不用规则代号、文件名、seed 编号、代码变量名。
 - 不用宣传性形容词：novel、powerful、robust（作为评价词）、state-of-the-art（无引用支持时）、remarkable、excellent、significant（无统计检验时）。推断强度见 `writing-rules.md` 第 4 节。
 - 以 “Our results/findings” 或 “We found” 开头的句子全文不超过 4 句；以作者名（“X et al.”）开头的句子不超过文献对比句的三分之一。
-- However、Moreover、Furthermore、Additionally、Notably、Importantly 每个全文最多两次，不连续三句以这类词开头。
+- 衔接按下方「句长、分号与衔接」执行；取消连接词全文次数死限。
 - 中文对照中，英文术语首次出现时给出通行中文译名，此后统一用中文；数据集、模型等专有名称保留英文。
 
 ## 2. 引用格式
@@ -44,3 +44,21 @@
 
 - 英文稿以 `## Discussion` 为唯一标题，下接各段，段与段之间空一行；结论段是最后一段，不加标题。作者或期刊要求独立 Conclusions 时，另起 `## Conclusions`。中文稿以 `## 讨论`（及 `## 结论`）为标题。对照稿按段交替：英文段、中文段。
 - 默认正文不加小标题、列表或加粗；作者或期刊要求小标题时用 `###`。
+
+## 句长、分号与衔接
+
+**句长**
+- 目标平均 18–28 词/句；单句一般不超过 45 词，**硬上限 60 词**（任何单句不得例外）。
+- 避免电报体：不连续出现 <8 词的短句；不得用"增加句子数"回避必要的从句结构，也不得为凑篇幅拉长句子。
+- 超过 45 词的句子占全文句数 >10% 时 WARN；任何 >60 词 = ERROR。
+
+**分号**
+- 散文分号只允许用于**同一命题的紧密补充**（同一论断的定义、限定或统计注释）。
+- **禁止分号链**：同一句内出现 ≥2 个散文分号（无论并列发现还是清单式列举）必须改写——拆为独立句，或改用并列/从属连词（and/but/whereas/because 等），或把清单写成紧凑并列（"we assessed A, B, and C"）。散文分号链 ≥1 处 = ERROR。
+- **结构性分号不受限**：缩写表（"BACC, balanced accuracy; CI, confidence interval."）、统计量括号（"(ρ = 0.743; 95% CI, 0.619–0.804)"）、引用列表（"(PMID: 29474911; PMID: 37704728)"）、表格注的缩写行。
+
+**衔接与生动（逻辑性）**
+- 主动用连词与从属结构表达因果（because/thus/therefore）、对比（whereas/by contrast）、让步（although/even so）、递进（moreover/in addition）；句子内部用从句承载层次，而非用分号堆叠。
+- 每段以主题句领起；段末句引出下一节点（与引言/讨论既有结构规则一致）。
+- 不连续三句以上以同一个连接词或短语开头；连接词按逻辑需要选用，不为凑数堆砌。
+- 仍禁：修辞性、宣传性形容词与无证据的强调（沿用 journal-style 既有清单）；口语化与演讲腔。

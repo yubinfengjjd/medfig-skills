@@ -1,6 +1,6 @@
 ---
 name: medical-sci-introduction
-description: "Use when drafting or revising the Introduction of a medical SCI manuscript after its Methods, Results and figure legends are written, such as 写引言、Introduction 撰写、SCI 引言中英对照、修改已有引言、补引言文献和 PMID. Produces an English Introduction (background, literature review, research gap, contribution, significance) with Chinese parallel text, verified PMID citations (≥10, ≥5 in the review) without disclosing any results, plus a Chinese 核查说明 with compliance notes and a citation verification table. Do not use for Methods, Results, Discussion, Abstract or figure legends (use medical-sci-methods / medical-sci-results / medical-sci-legends), outline building or drawing figures."
+description: Use when drafting or revising the Introduction of a medical SCI manuscript after its Methods, Results and figure legends are written, such as 写引言、Introduction 撰写、SCI 引言中英对照、修改已有引言、补引言文献和 PMID. Produces an English Introduction (background, literature review, research gap, contribution, significance) with Chinese parallel text, verified PMID citations under PROJECT.md quotas (default ≥20, ≥10 in the review) without disclosing any results, plus a Chinese 核查说明 with compliance notes and a citation verification table. Do not use for Methods, Results, Discussion, Abstract or figure legends (use medical-sci-methods / medical-sci-results / medical-sci-legends), outline building or drawing figures.
 ---
 
 # 医学 SCI 引言写作
@@ -9,7 +9,7 @@ description: "Use when drafting or revising the Introduction of a medical SCI ma
 
 ## 必读材料（每次起草或修订都执行）
 
-不凭技能名称或上次任务的摘要开始写作。按顺序完整读取：
+不凭技能名称或上次任务的摘要开始写作。用 Read 按顺序完整读取：
 
 1. [原始提示词](references/original-introduction-prompt.md)：基础角色与写作要求，以及作者确认的改动。
 2. [已确认写作规则](references/writing-rules.md)：对原始提示词的细化，冲突时以它为准。
@@ -21,15 +21,15 @@ description: "Use when drafting or revising the Introduction of a medical SCI ma
 
 ## 工作流程
 
-1. **前置检查**：确认 Methods、Results 和图注都已写完（规则第 1 节）。缺任一份时先告诉作者并建议补齐；作者要求继续才往下做。同时记录目标期刊是否指定，未指定则采用默认策略。
+1. **前置检查**：确认 Methods、Results 和图注都已写完（规则第 1 节）。缺任一份时先告诉作者并建议补齐；作者要求继续才往下做。同时记录目标期刊是否指定，未指定则采用默认策略。 从工作目录或材料路径向上找到 PROJECT.md，读取“写作目标”的本节配额和目标期刊；缺 PROJECT 或缺该小节时采用缺省并在核查说明中说明，缺个别字段时仅该字段用缺省。作者可随时修改；不新建 PROJECT.md。配额读取与统计约定见 medpaper-pipeline/references/citation-quotas.md。
 2. **提取研究要素**：从大纲和 Methods 提取研究领域、临床问题、数据与设计、方法、研究问题和措辞边界；从 Results 和图注只核对每个研究问题都有对应分析，不摘取数字或结论（规则第 1、3 节）。
-3. **建文献池**：收集手稿已有引用的 PMID，逐条核对；不足时按论证需要检索 PubMed 补充（规则第 5 节）。PMID 用 curl 查 Europe PMC REST API，NCBI E-utilities 作备用；DOI 用 Crossref（带 `mailto` 参数）。curl 因 TLS 或证书错误失败时，改用带 OpenSSL 的 Python（urllib）发送同样的请求。读摘要确认支持关系后才放入候选。只提交公开主题词和标识，不提交稿件正文、数据或代码。中间结果放在临时目录。
-4. **搭论证线**：先在内部列出五个层次各自的论点和对应引用（规则第 2 节），确认研究空白有依据、本研究的问题与 Results 实际分析一一对应（规则第 4 节）、PMID 数量达到门槛。
+3. **建文献池**：收集手稿已有引用的 PMID，逐条核对；不足时按论证需要检索 PubMed 补充（规则第 5 节）。PMID 用 WebFetch 或 curl 查 Europe PMC REST API，NCBI E-utilities 作备用；DOI 用 Crossref（带 `mailto` 参数）。curl 因 TLS 或证书错误失败时，改用带 OpenSSL 的 Python（urllib）发送同样的请求。读摘要确认支持关系后才放入候选。只提交公开主题词和标识，不提交稿件正文、数据或代码。中间结果放在临时目录。
+4. **搭论证线**：先在内部列出五个层次各自的论点和对应引用（规则第 2 节），确认研究空白有依据、本研究的问题与 Results 实际分析一一对应（规则第 4 节）、按登记配额核对已核验 PMID 数量（缺省全文 ≥20、综述层 ≥10）；检索穷尽仍不足时记录缺口并继续，不凑数。
 5. **撰写英文**：4–6 段，无小标题；结果规避按规则第 3 节，措辞按规则第 4 节和 journal-style 第 1 节。
 6. **撰写中文对照**：逐段重组为规范中文，事实、引用和限定与英文一致（规则第 6 节）。
 7. **复核**：用本地脚本统计词数和引用数，再按下方“交付前检查”逐项确认，写核查说明（规则第 7 节）。
 
-默认在当前会话中完成，不派出子代理。
+默认在当前对话中完成，不派出子代理。用户明确要求并行或隔离测试时除外。
 
 ## 项目约定（检测到 PROJECT.md 时）
 
@@ -56,26 +56,30 @@ description: "Use when drafting or revising the Introduction of a medical SCI ma
 
 ## 输出
 
-- 单独保存时，输出到用户指定目录：`Introduction_EN.md`、`Introduction_ZH.md`、`Introduction_EN_ZH.md`、`Introduction_核查说明.md`（每次都输出）。
+- 单独保存时，用 Write 输出到用户指定目录：`Introduction_EN.md`、`Introduction_ZH.md`、`Introduction_EN_ZH.md`、`Introduction_核查说明.md`（每次都输出）。
 - 只在对话中交付时，先给英文，再给中文，核查说明放在独立说明块。
 - 交付时报告英文词数（口径见 journal-style 第 4 节）、PMID 引用总数及综述层次内的 PMID 数、降级引用数，以及需作者裁决的事项条数。
 - 不在稿件目录留下处理脚本或检索缓存；不修改技能目录、全局配置、大纲、Methods、Results、图注或数据。
 
 ## 交付前检查
 
+- [ ] 散文分号链 0 处（同句 ≥2 个散文分号为 ERROR，结构性分号豁免）；目标平均 18–28 词/句，一般 ≤45 词、硬上限 60 词，>45 词占比 >10% 为 WARN；无连续 ≥3 个 <8 词短句的电报体连跑；WARN 已逐条说明。连接词按逻辑需要使用，不连续三句以上以同一个连接词或短语开头；按 journal-style 的「句长、分号与衔接」复核。
+
 - [ ] 前置稿件齐全，或缺失情况已告知作者并写入核查说明第 1 部分。
 - [ ] 五个层次（背景、综述、空白、本研究贡献、意义）都出现；4–6 段，无小标题、列表、路标式连接或“本文结构如下”。
-- [ ] 设计部分约 150 词以内，没有训练阶段、标签映射、划分规则、比较器清单或评估层级；各项分析已归并为 2–3 个研究问题，没有逐项罗列 Results 目录；没有 Methods 内部构造名。
-- [ ] 每个空白句点名所引研究的具体局限；至少一句与最接近的现有方法的具体区别；意义句写明对谁、在哪个环节有用；临床背景引临床或综述来源，核心空白尽量各有 2 篇直接相关引用（不足时如实说明，不凑数）。
+- [ ] 设计部分约 150 词以内，没有训练阶段、标签映射、划分规则、比较器清单或评估层级；各项分析已归并为 1–3 个研究问题，没有逐项罗列 Results 目录；没有 Methods 内部构造名。
+- [ ] 每个空白句点名所引研究的具体局限；每个设计要素与最接近现有设计的同句对照已按规则第 2 节第 4 层核对；意义句写明对谁、在哪个环节有用；临床背景引临床或综述来源，核心空白尽量各有 2 篇直接相关引用（不足时如实说明，不凑数）。
 - [ ] 否定式空白句（do not establish 等）≤2 处，相邻段落不以同一句式收尾；每个 PMID 紧跟所支持的研究或论断；综述中以作者名开头的句子 ≤1/3。
 - [ ] 没有逐段的免责式范围声明（“不意味着临床获益”“不在本研究范围内”等），全文最多 1 句。
 - [ ] 段末没有复述性总结句；研究问题中的分析对象与 Results 实际检验的量一致。
 - [ ] 没有本研究的数字、方向性结论或 demonstrate/reveal/show that 后接本研究发现；逐句对照过 Results 稿，没有借来的数字或判断。
 - [ ] 引言提出的每个问题都有 Results 中的对应分析；没有材料之外的研究问题、方法、结论或 Discussion 层面的推测。
 - [ ] 研究空白由所引研究的局限推出，或有检索记录支撑；没有 no study has ever、novel、first、breakthrough 等表述，“to our knowledge”最多一处且有检索依据。
-- [ ] 带已核验 PMID 的不同文献 ≥10 篇，综述层次内 ≥5 篇；每条 PMID 的题名、第一作者、期刊、年份已核对，摘要支持所引论断；背景数字与所引摘要一致。
+- [ ] 带已核验 PMID 的不同文献及综述层数量已与 PROJECT.md 配额对照（缺省 ≥20 / ≥10）；不足时已说明实际 vs 目标、缺口与检索主题，不因软门槛停工；每条 PMID 的题名、第一作者、期刊、年份已核对，摘要支持所引论断；背景数字与所引摘要一致。
 - [ ] 引用格式为纯文本 `(PMID: …)`；确无 PMID 的按 DOI > 出版页 URL > arXiv 降级并列入核查说明；没有占位、猜测或未核验的标识。
 - [ ] 没有写影响因子或分区；没有声称符合某具体期刊的要求（用户未指定时）。
-- [ ] 英文 ≤1,000 词（或更严格的期刊限制），单句不超过 50 词；美式拼写；术语和缩写与 Methods 一致；没有内部标识或工程词汇。
+- [ ] 英文默认 900–1,100 词、≤1,200 词（或更严格的期刊限制），单句硬上限 60 词；美式拼写；术语和缩写与 Methods 一致；没有内部标识或工程词汇。
 - [ ] 中文对照按中文语序重组，事实、引用、限定与英文一致，引用用全角括号。
-- [ ] 核查说明四部分齐全：需作者裁决事项、逐条合规说明（含目标期刊策略）、引用核验表（含 PMID 计数）、检索记录。
+- [ ] 核查说明四部分齐全：需作者裁决事项、逐条合规说明（含目标期刊策略）、引用核验表（含已核验 PMID 实际 vs 目标、综述层计数、缺口与检索主题）、检索记录。
+- [ ] 引用核验表建议：完成元数据及支持关系核验后，状态以“已核验”开头，未完成写“暂未核验”；正文用途建议标注“（综述层）”。兼容旧自由文本的“已核验”/“已核对”/verified及“综述”/review，否定优先；未识别状态按未核验并在WARN附原文片段。
+- [ ] 交付前五问自检（逐项回答并打勾）：① 空白有据（每句点名所引研究的具体局限）？② 问题够准（1–3 个、可被 Results 回答）？③ 设计接住问题（回扣问题 + 与最接近现有设计同句对照）？④ 贡献与正文分析一一对应？⑤ 意义有界（对谁、哪个决策环节）？

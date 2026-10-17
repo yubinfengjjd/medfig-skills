@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.0 (2026-10-17)
+
+新增 `medical-sci-references`（写作第 12 步）与三个科研/项目技能，并同步这一轮写作与表格规则：
+
+- `medical-sci-references`：从成品主稿抽取引用标识，按 PMID/DOI/arXiv 查重并补入 Zotero，注入 Word 原生引文字段与文献表；支持本地 API 写入（Zotero ≥10.0.5）与 connector 导入两条通道；核对不变式 I1–I9（字段守恒、占位=原文、位置对应、文本零改动、条目一致、偏好/文献表、资产未动、人工保留登记、幂等），支持作者提供的 URL→条目映射；Zotero 由作者保持运行，技能不自行启动或改设置。
+- `medpaper-pipeline`：新增第 12 阶段与 `PROJECT.md`“写作目标”配额（总数 + 各节）；新增 `citation_stats.py` 统计已核验引用并输出缺口；阶段 5/8/9 把写作目标传给对应技能。返工传播包含第 12 步。
+- 写作配额：Introduction 缺省 ≥20（综述层 ≥10）、Discussion ≥20（每个核心发现 ≥2 篇直接对比）、Methods ≥15（仅统计登记）；软门槛，缺口如实报告，不凑数。
+- 语言风格（全部写作技能）：同句 ≥2 个散文分号为 ERROR（缩写表、统计括号、引用列表等结构性分号豁免）；目标平均 18–28 词/句，一般 ≤45、硬上限 60，不连续出现 <8 词短句；`medpaper-pipeline` 与 `medical-sci-abstract` 新增 `style_check.py`，`manuscript_check.py`/`check_finalize.py` 接入。
+- 表格发表形态：`medfig-plan` 新增 ≤10 列 / ≤40 行、表体禁 >50 字符、近常数与可推导列处理、每表必须被正文引用、`presentation_trim` 转换登记；`medical-sci-legends` 表注承载移出的方法/口径说明；`medical-sci-finalize` 对超宽表与长单元格出 WARN。
+- `medical-sci-finalize`：表键以 Markdown 首行显示编号为准并核对 `presentation_trim.display_number`；同一表号支持多个 Markdown 区块（共用一次表题表注、块间一个空段、逐块布局与记录）；单区块输出保持字节不变；新增对应检查器规则与 29 项测试。
+- 新增 `medical-research-plan`（科研开题与工程计划）、`medimg-experiment`（受管 Windows 本地影像实验）、`socratic-project-manager`（苏格拉底式项目访谈）。
+- `medimg-experiment`：隔离根目录改为可配置的 `MEDEXP_BLOCKED_ROOTS`，不再硬编码外部工程路径。
+- `install.py` 与 `tests/test_skills.py` 纳入新增技能；README 增补参考文献前置条件与三个科研技能说明。
+
 ## 0.7.0 (2026-10-15)
 
 新增医学论文写作套件（七个 `medical-sci-*` 写作技能 + 编排技能 `medpaper-pipeline`）：

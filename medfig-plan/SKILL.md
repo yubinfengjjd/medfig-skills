@@ -126,7 +126,7 @@ description: Use when the user needs to plan a set of medical research figures o
 
 按 `references/table_plan.md`：
 
-- 主表 + 附表，每张表写明内容、列、来源文件、输出格式（CSV + Markdown + LaTeX + source.json；Word 交下游）。
+- 主表 + 附表，每张表写明内容、列、来源文件、输出格式（CSV + Markdown + LaTeX + source.json；Word 交下游），并执行 `references/table_plan.md` 的“附表与主表的发表形态约束”：≤10 列 / ≤40 数据行，超限拆分、移出或逐表写明理由；说明性文字进表注，>50 字符单元格必须移动或压缩；处理近常数 / 可推导列、每队列常数；每表登记支撑论断与正文引用节；任何删减 / 合并 / 文字外移登记 `presentation_trim`。规格 §5 增加“列数 / 行数 / 表注承载”三栏。
 - 必备口径裁决表（ST11 式）：每条语义裁决或相对上游的修正，含权威文档、旧 → 新表述、上游文件 SHA-256 变化（A8, E7）。
 - 论文项目（项目根有 `PROJECT.md`）：同时建立项目根的 `口径表.md`（格式见 `medpaper-pipeline/references/consistency-guards.md` 第 2 节），至少写入：每个比较条件和规则的规范名与禁用别名（代码标签如 oracle、R0–R5 不进论文，过强称呼如 upper bound 列为禁用）、每个派生量的定义（拟合分区、评估分区、分组变量、尺度，出处到代码行）、各队列的扫描数与分组数。规格中的口径裁决只写引用，不在两处重复维护。
 - 必备图表来源索引（ST12 式）：由全部 source.json 自动生成，列出每个 panel 的输入路径、SHA-256、行数、变换；所有图导出后最后重建（A7）。
@@ -145,6 +145,7 @@ description: Use when the user needs to plan a set of medical research figures o
 5b. 图内文字扫描：每个 panel 的 chart 字段里写的图内文字（标题、轴名、图例、注释）只含结果与读图编码；没有免责声明、口径、结论句、交叉引用和内部代号；代号对照表覆盖规格里出现的每个代号。
 5c. 版本扫描：没有任何 panel、表或图注用到 §0 版本清单里的丢弃项；没有按内部计划编号组织的行（`references/mainline_rules.md`）。
 5d. 曲线与选例扫描：每张报判别性能的主图有 ROC / PR 曲线 panel，否则写了 `curve_exempt`；每个病例影像 panel 有 `case_selection`（seed、每组 ≥ 12 例、含误判、候选池），单病例页写明 exempt。`spec_check.py` 会报这两类缺项。
+5e. 表格发表形态自检：§5 的“列数 / 行数 / 表注承载”三栏及支撑论断、正文引用节已逐表填写；≤10 列 / ≤40 数据行，超限已拆分、移出或写明理由；表体无 >50 字符单元格，方法 / 处理规则 / 口径说明已进表注；近常数和可推导列已处理、每队列常数不逐行重复；源文件保留，所有行列删减 / 合并 / 文字外移有 `presentation_trim` 可还原；未被正文引用的表不进投稿件，整表移出有一句数据仓库指向。此项按 `references/table_plan.md` 人工核对，既有 `spec_check.py` 不自动判定这些内容。
 6. 偏离清单：所有降级、合并、删除、示意图外部绘制都列出（E8）。
 7. 样式扫描（S1–S7，见 `references/panel_rules.md` §6）：影像列 width_ratios 按图像宽高比、左右留白 ≤ 15%；无纯文字 panel；每 panel 数据图元有 Okabe-Ito 色且方法色不撞队列色；每 panel 写明 panel_file（单独 PDF（必需）+ SVG，无 a/b/c）；ROC 为共同 FPR 网格 mean ± SD 样式；S6 病例矩阵与选例、S7 主图曲线。
 

@@ -4,7 +4,8 @@
 Copies ONLY the directories listed in SKILLS: medfig-suite, medfig-plan, medfig-render, medfig-orchestrate,
 medfig-outline, medfig-schematic, medfig-illustrator, scipilot-medimg-figure-skill (medfig-render calls its
 scripts/), medical-sci-methods, medical-sci-legends, medical-sci-results, medical-sci-introduction,
-medical-sci-discussion, medical-sci-abstract, medical-sci-finalize and medpaper-pipeline.
+medical-sci-discussion, medical-sci-abstract, medical-sci-finalize, medical-sci-references, medpaper-pipeline,
+medical-research-plan, medimg-experiment and socratic-project-manager.
 Existing installs are moved to a timestamped backup before being replaced;
 nothing is ever deleted. After copying, every file is SHA-256 verified
 against the source and a `.medfig_install.json` stamp is written.
@@ -29,7 +30,8 @@ SRC_ROOT = Path(__file__).resolve().parent
 SKILLS = ("medfig-suite", "medfig-plan", "medfig-render", "medfig-orchestrate", "medfig-outline", "medfig-schematic",
           "medfig-illustrator", "scipilot-medimg-figure-skill",
           "medical-sci-methods", "medical-sci-legends", "medical-sci-results", "medical-sci-introduction",
-          "medical-sci-discussion", "medical-sci-abstract", "medical-sci-finalize", "medpaper-pipeline")
+          "medical-sci-discussion", "medical-sci-abstract", "medical-sci-finalize", "medical-sci-references",
+          "medpaper-pipeline", "medical-research-plan", "medimg-experiment", "socratic-project-manager")
 STAMP = ".medfig_install.json"
 
 EXCLUDED_DIR_NAMES = {"__pycache__", ".pytest_cache", ".git"}

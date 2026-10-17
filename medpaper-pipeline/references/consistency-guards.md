@@ -108,7 +108,7 @@
 
 **章节自检（section = methods / legends / results / introduction / discussion / abstract）** `scripts/manuscript_check.py <methods|legends|results|introduction|discussion|abstract> <EN 稿> [--zh ZH 稿] [--results Results_en 稿]`：检查词数、句长、禁用词、模板句频次、引用格式与 PMID 数、中英 PMID 与数字一致性、稿件数字能否在 Results 中找到、panel 字母大小写等可数规则；ERROR 必须修掉，WARN 由作者裁决。论证质量和引用是否支持论断不在脚本范围内。
 
-Abstract 模式正文默认≤250词，Keywords/Highlights 不计入正文词数，但参与强度词与数字核对；默认不带引用、图表号或引用占位。指定期刊篇幅可用 `--max-words`，明确要求引用时才用 `--allow-abstract-references`。四段结构、Results 3–5句和证据核对按 medical-sci-abstract 执行；脚本不验证统计定义、CI归属和所有中英单位。
+Abstract 模式正文默认≤250词，Keywords/Highlights 不计入正文词数，但参与强度词与数字核对；默认不带引用、图表号或引用占位。指定期刊篇幅可用 `--max-words`，明确要求引用时才用 `--allow-abstract-references`。四段结构、Results 4–6句（或按字数自然分句），不得用分号链压缩和证据核对按 medical-sci-abstract 执行；脚本不验证统计定义、CI归属和所有中英单位。
 
 - 关键计数行的“数值”或“规范写法”列必须写成“数字 + 单位”，单位需在脚本已知集合内（临床组、重复组件/组件、受试者簇、扫描、图像）；只有数字没有可识别单位的行只做出处核对，稿件侧不检查。
 - 改动这两个脚本后运行 `scripts/test_checks.py`（11 项回归测试，无需网络、不读项目）。
@@ -125,3 +125,13 @@ Abstract 模式正文默认≤250词，Keywords/Highlights 不计入正文词数
 4. 该阶段的 `待裁决` 条目清零后，才能标 `已确认`。作者明确决定暂缓的条目，标 `暂缓` 并写明理由，不阻塞。
 
 上游修改后，依赖它的下游阶段改为 `需返工`（medpaper-pipeline 规则），返工范围只限受影响的段落。
+
+### 句长、分号与衔接检查口径（2026-10-17）
+
+各写作技能 journal-style 的同名节采用开发计划 §2 原文。`manuscript_check.py` 与 `medical-sci-abstract/scripts/check_abstract.py` 使用两个字节一致的 `style_check.py` 副本；复制更新时必须同步并重跑语义一致性测试。`medical-sci-finalize/scripts/check_finalize.py` 直接复用 pipeline 副本，不另实现第三套解析。
+
+英语散文按空白分词，保留统计记号；移除标题、Markdown 表格行、代码围栏和加粗图表标题，panel 标签不计词。正文软换行合并；空段、标题、图表注边界与列表项重置短句连跑。小数、常见缩写、括号与引号感知分句；非常见缩写、不成对括号、公式与引文含句点的复杂情形仍需人工复核。结构性分号识别缩写-释义清单、统计括号和引用列表（包括本文图表引用），普通括号与 Notes 标签不会整体豁免；结构性分号仍计入句长，不免除 60 词硬顶。缩写清单识别全大写缩写，以及至少含两个大写字母的混合大小写缩写（如 eGFR、t-SNE）；其余非常见写法需人工复核。
+
+检查器输出散文分号链 ERROR、任何 >60 词 ERROR、>45 词句占比 >10% WARN、平均句长不在 18–28 WARN、同一段连续 ≥3 个 <8 词短句 WARN。每项附节名、句序号、一基行号、零基字符偏移、首词、前 80 字符、当前值、阈值和拆句/连词/紧凑并列提示；聚合项的 locations 列表列出涉及的长句或短句。平均值与占比基于当前输入的全部散文句，不跨文件拼接短句连跑。
+
+`analyze_style(text, section)` 供本地复用，返回 statistics / sentences / findings；`manuscript_check.py --json` 仍返回既有 findings 列表，旧字段和非风格检查维持原义。连接词的逻辑恰当性、单分号是否为同一命题补充，以及连续相同起句由人工按 journal-style 复核；计数器不验证科学含义或把改写建议自动应用到稿件。

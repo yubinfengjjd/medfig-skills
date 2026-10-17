@@ -1,6 +1,7 @@
 """Offline structural and before/after integrity checks; exit 0 clean, 1 errors.
 
-Style counts are diagnostic only. They never authorize deletion of scientific evidence.
+Defensive/AI pattern counts are diagnostic only. Sentence/semicolon ERRORs are
+reported by assembly checks; none authorize deletion of scientific evidence.
 """
 from __future__ import annotations
 
@@ -12,6 +13,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import importlib.util
 
 from docx import Document
 from docx.oxml.ns import qn
@@ -40,6 +42,37 @@ DEFENSIVE = re.compile(r'\b(?:unfortunately|regrettably|we apologize|we must adm
 AI_STYLE = re.compile(r'\b(?:delve|tapestry|pivotal|showcase|groundbreaking|it is (?:important|worth) to note|it is worth noting|in conclusion)\b|—|\bnot\b.{0,60}\bbut\b', re.I)
 TARGETS = {'Methods': (2500, 3000), 'Results': (3500, 4000), 'Introduction': (0, 1000),
            'Discussion': (800, 1500), 'Abstract': (0, 250)}
+
+
+def manuscript_style(model):
+    """Reuse the pipeline analyzer; inspect source prose without changing it.
+
+    Titles/Keywords/Highlights and table cells are excluded. Main/supplementary
+    captions and table notes are included once each. A missing dependency fails
+    explicitly instead of silently omitting the style gate.
+    """
+    helper = Path(__file__).resolve().parents[2]/'medpaper-pipeline/scripts/style_check.py'
+    if not helper.is_file():
+        raise ValueError('Style checker dependency missing: '+str(helper))
+    spec = importlib.util.spec_from_file_location('finalize_pipeline_style', helper)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    units = {}
+    for section, text in model['texts'].items():
+        if section == 'Abstract':
+            text = re.split(r'^#{1,6}\s*(?:Keywords|Highlights)\s*#*\s*$', text,
+                            maxsplit=1, flags=re.M | re.I)[0]
+        units[section] = text
+    for family, prefix in [('figure_captions','Figure '),('supp_captions','Supplementary Figure '),
+                           ('table_captions','Table ')]:
+        for key, caption in model[family].items():
+            label = ('Supplementary Table ' if prefix == 'Table ' and key.startswith('S') else prefix)+key
+            units[label] = caption
+    sections = {section: module.analyze_style(text, section) for section, text in units.items()}
+    full = '\n\n'.join('## '+section+'\n'+text for section, text in units.items())
+    whole = module.analyze_style(full, 'whole manuscript')
+    return {'whole': whole, 'sections': sections,
+            'scope': 'English source bodies, main/supp figure captions and table notes; excludes headings, Keywords, Highlights and table cells'}
 
 
 def word_count(text):
@@ -175,6 +208,35 @@ def rendered_text(text, decode_escapes=False):
     return doc_paragraph_text(p)
 
 
+def table_presentation_warnings(table, key):
+    """Read-only publication-shape hints; footnotes outside w:tbl are excluded."""
+    warnings = []
+    rows = [[('\n'.join(doc_paragraph_text(p) for p in cell.paragraphs)).strip()
+             for cell in row.cells] for row in table.rows]
+    count = len(table.columns)
+    headers = rows[0] if rows else []
+    def name(index):
+        label = headers[index] if index < len(headers) else ''
+        return f'{index+1}: {label or "(unnamed)"}'
+    if count > 10:
+        warnings.append(f'Table {key}: presentation_trim recommended; {count} columns (>10); '
+                        'columns=['+'; '.join(name(i) for i in range(count))+']')
+    long_cells = {}
+    for row_number, cells in enumerate(rows, 1):
+        for index, text in enumerate(cells):
+            if len(text) > 50:
+                long_cells.setdefault(index, []).append((row_number, len(text)))
+    if long_cells:
+        details = []
+        for index, cells in sorted(long_cells.items()):
+            details.append(name(index)+f' (rows={",".join(str(r) for r, _ in cells)}; '
+                           f'max={max(n for _, n in cells)} characters)')
+        warnings.append(f'Table {key}: presentation_trim recommended; cells >50 characters; '
+                        'move explanations to table notes or shorten labels; columns=['+
+                        '; '.join(details)+']')
+    return warnings
+
+
 def check_document(path, model, kind):
     errors, warnings = [], []
     doc = Document(path)
@@ -229,28 +291,46 @@ def check_document(path, model, kind):
     table_keys = sorted((k for k in model['tables'] if k.startswith('S') == (kind == 'supp')),
                         key=lambda k: int(k.removeprefix('S')))
     grouped = {k: [] for k in table_keys}; table_sequence = []; table_names = {}; layouts = []
+    source_blocks = {k: build.table_blocks(build.read(model['tables'][k]), k) for k in table_keys}
     for table in doc.tables:
         previous = table._tbl.getprevious()
         if previous is None or previous.tag != qn('w:p'):
             errors.append(kind+' table title must be directly above table'); continue
         paragraph = Paragraph(previous, doc); caption = doc_paragraph_text(paragraph)
         match = re.match(r'(?:Supplementary\s+)?Table\s+(S?\d+)\.', caption)
-        if not match or match[1] not in grouped:
+        preceding = previous.getprevious()
+        continuation = table_names.get(preceding) if not caption else None
+        if match and match[1] in grouped:
+            key = match[1]
+        elif continuation is not None:
+            key = continuation
+        else:
             errors.append(kind+' unknown table caption: '+caption[:40]); continue
-        key = match[1]; grouped[key].append(table); table_sequence.append(key); table_names[table._tbl] = key
+        grouped[key].append(table); table_sequence.append(key); table_names[table._tbl] = key
+        index = len(grouped[key]); count = len(source_blocks[key])
+        if index > count:
+            errors.append(f'Table {key}: unexpected block {index}'); continue
+        label = key + (f' block {index}' if count > 1 else '')
+        warnings.extend(table_presentation_warnings(table, label))
         source = model['table_captions'][key]; end = build.caption_title_end(source)
-        check_caption(paragraph, source[:end])
-        if source[end:]:
+        if index == 1:
+            check_caption(paragraph, source[:end])
+        elif caption:
+            errors.append(f'Table {label}: expected one empty paragraph between blocks')
+        if index == count and source[end:]:
             node = table._tbl.getnext()
             if node is None or node.tag != qn('w:p'):
                 errors.append(f'Table {key}: notes missing after table')
             else:
                 check_caption(Paragraph(node, doc), source[end:], notes=True)
-        headers, rows = list(build.md_tables(build.read(model['tables'][key])))[0]
+        headers, rows = source_blocks[key][index-1]
         columns = [[rendered_text(t, decode_escapes=True) for t in col] for col in zip(headers,*rows)]
         layout, widths = build.table_layout(columns, build.Cm(14.6).pt)
         layout = dict(table=key, **layout); layouts.append(layout)
-        information.append(f'Table {key}: {layout["font_size_pt"]} pt; single table')
+        if count > 1:
+            layout.update(block=index, blocks=count)
+        information.append(f'Table {label}: {layout["font_size_pt"]} pt; ' +
+                           (f'{count} blocks' if count > 1 else 'single table'))
         if layout['word_wrap_columns']: warnings.append(build.table_wrap_warning(layout))
         actual = [[doc_paragraph_text(c.paragraphs[0]) for c in row.cells] for row in table.rows]
         expected = [[rendered_text(c, decode_escapes=True) for c in row] for row in [headers,*rows]]
@@ -280,7 +360,10 @@ def check_document(path, model, kind):
         if not table.rows[0]._tr.xpath('./w:trPr/w:tblHeader'):
             errors.append(f'Table {key}: repeated header missing')
     for key,tables in grouped.items():
-        if len(tables) != 1: errors.append(f'{kind} table {key}: expected single w:tbl, found {len(tables)}')
+        count = len(source_blocks[key])
+        if len(tables) != count:
+            expected_count = 'single' if count == 1 else str(count)
+            errors.append(f'{kind} table {key}: expected {expected_count} w:tbl, found {len(tables)}')
     if '(continued)' in joined: errors.append(kind+' continued table markers forbidden')
     if len(doc.sections) != 1 or doc.element.xpath('.//w:pgSz[@w:orient="landscape"]'):
         errors.append(kind+' must have one portrait section')
@@ -340,7 +423,10 @@ def check_document(path, model, kind):
             expected.append(('figure',key)); text(model[cap_key][key])
         else:
             source = model['table_captions'][key]; end = build.caption_title_end(source)
-            text(source[:end]); expected.append(('table',key))
+            text(source[:end])
+            for index in range(len(source_blocks[key])):
+                if index: text('')
+                expected.append(('table',key))
             if source[end:]: text(source[end:])
     if kind == 'main':
         text('[Manuscript title]',16); text('[Authors]',10)
@@ -402,7 +488,10 @@ def check_assembly(root, output=None, version=1, name=None):
         for key,caption in model[family].items():
             n = word_count(caption)
             if n > 150: warnings.append(f'Source Figure {key} has {n} words (>150); author decision required')
-    return {'errors':errors,'warnings':warnings,'information':information,'documents':results,'words':words,
+    style = manuscript_style(model)
+    errors.extend(f['rule']+': '+f['msg'] for f in style['whole']['findings'] if f['level'] == 'ERROR')
+    warnings.extend(f['rule']+': '+f['msg'] for f in style['whole']['findings'] if f['level'] == 'WARN')
+    return {'errors':errors,'warnings':warnings,'information':information,'documents':results,'words':words,'style':style,
             'submission_ready':False,
             'boundary':'No References is generated. Structural checks do not establish visual layout, submission readiness, clinical validity or author acceptance.'}
 

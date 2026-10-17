@@ -200,11 +200,27 @@ def project_model(root):
         main_assets['1'] = first
     supp_assets = figure_assets(root/'02_figures/out/figures/supp', 's', warnings)
     table_assets = {}
-    for p in (root/'02_figures/out/tables').glob('*.md'):
-        m = re.fullmatch(r'(S?T)(\d+)', p.stem, re.I)
-        if m:
+    for p in sorted((root/'02_figures/out/tables').glob('*.md')):
+        first_line = read(p).splitlines()[:1]
+        display = re.match(r'^\s*\*\*(Table|Supplementary Table)\s+(S?\d+)\.',
+                           first_line[0]) if first_line else None
+        if display:
+            key = display[2]
+            expected = display[1] + ' ' + key
+            provenance = p.with_suffix('.source.json')
+            if provenance.is_file():
+                registered = (json.loads(read(provenance)).get('presentation_trim') or {}).get('display_number')
+                if registered and registered != expected:
+                    raise ValueError(f'Table display/provenance number mismatch: {p}: '
+                                     f'{expected!r} != {registered!r}')
+        else:
+            m = re.fullmatch(r'(S?T)(\d+)', p.stem, re.I)
+            if not m:
+                continue
             key = ('S' if m[1].upper() == 'ST' else '')+str(int(m[2]))
-            table_assets[key] = p
+        if key in table_assets:
+            raise ValueError(f'Duplicate publication table number: {key}: {table_assets[key]} and {p}')
+        table_assets[key] = p
     for name, assets, caps in [('main figures', main_assets, figs), ('supp figures', supp_assets, supp),
                                ('tables', table_assets, tabs)]:
         if set(assets) != set(caps):
@@ -544,22 +560,73 @@ def table_layout(columns, available):
 def table_wrap_warning(layout):
     details = '; '.join(f'column {c["column"]} ({c["header"]}): '+', '.join(c['samples'][:3])
                         for c in layout['word_wrap_columns'])
-    return f'Table {layout["table"]}: estimated word-internal wrapping at 6.5 pt; '+details
+    block = f' block {layout["block"]}' if 'block' in layout else ''
+    return f'Table {layout["table"]}{block}: estimated word-internal wrapping at 6.5 pt; '+details
+
+
+def table_blocks(text, key):
+    """Validate every pipe-delimited block before writing any Word content.
+
+    Keep the permissive md_tables reader for reference catalogs; publication
+    tables must not silently lose a malformed or empty additional block.
+    """
+    groups, current = [], []
+    for line in text.splitlines():
+        if line.strip().startswith('|'):
+            current.append(line)
+        elif current:
+            groups.append(current); current = []
+    if current:
+        groups.append(current)
+    if not groups:
+        raise ValueError(f'Table {key}: no Markdown tables')
+    parsed = []
+    for index, lines in enumerate(groups, 1):
+        label = f'Table {key} block {index}'
+        if len(lines) < 3:
+            raise ValueError(f'{label}: empty or incomplete Markdown table')
+        headers = table_cells(lines[0])
+        separator = table_cells(lines[1])
+        if not headers or not any(headers) or len(separator) != len(headers) or not all(
+                re.fullmatch(r':?-+:?', cell) for cell in separator):
+            raise ValueError(f'{label}: malformed Markdown table header/separator')
+        rows = [table_cells(line) for line in lines[2:]]
+        if any(len(row) != len(headers) for row in rows):
+            raise ValueError(f'{label}: malformed Markdown table row')
+        if not any(cell for row in rows for cell in row):
+            raise ValueError(f'{label}: empty Markdown table')
+        parsed.append((headers, rows))
+    return parsed
 
 
 def add_table(doc, key, model, warnings=None, information=None, layouts=None):
-    parsed = list(md_tables(read(model['tables'][key])))
-    if len(parsed) != 1: raise ValueError(f'Table {key}: expected one Markdown table')
-    headers, rows = parsed[0]
+    parsed = table_blocks(read(model['tables'][key]), key)
+    results = []
+    for index, (headers, rows) in enumerate(parsed, 1):
+        if index > 1:
+            add_blank(doc)
+        results.append(_add_table_block(doc, key, model, headers, rows, warnings,
+                                       information, layouts, index, len(parsed)))
+    return results[0] if len(results) == 1 else results
+
+
+def _add_table_block(doc, key, model, headers, rows, warnings, information, layouts, index, total):
     columns = [[cell_display(t) for t in col] for col in zip(headers, *rows)]
     layout, widths = table_layout(columns, Cm(14.6).pt)
     layout = dict(table=key, **layout)
+    if total > 1:
+        layout.update(block=index, blocks=total)
     if layouts is not None: layouts.append(layout)
-    if information is not None: information.append(f'Table {key}: {layout["font_size_pt"]} pt; single table')
+    if information is not None:
+        if total == 1:
+            information.append(f'Table {key}: {layout["font_size_pt"]} pt; single table')
+        else:
+            information.append(f'Table {key} block {index}: {layout["font_size_pt"]} pt; {total} blocks')
     if layout['word_wrap_columns'] and warnings is not None:
         warnings.append(table_wrap_warning(layout))
     caption = model['table_captions'][key]; end = caption_title_end(caption)
-    add_caption(doc, caption, title_only=True)
+    if index == 1:
+        add_caption(doc, caption, title_only=True)
     table = doc.add_table(rows=1, cols=len(headers)); table.style = 'Table Grid'
     table.autofit = False
     tbl_width = table._tbl.tblPr.find(qn('w:tblW')); tbl_width.set(qn('w:type'), 'dxa')
@@ -582,7 +649,7 @@ def add_table(doc, key, model, warnings=None, information=None, layouts=None):
             for math_run in paragraph._p.iter(qn('m:r')):
                 props = math_run.find(qn('w:rPr')); sz = OxmlElement('w:sz')
                 sz.set(qn('w:val'), str(round(layout['font_size_pt']*2))); props.append(sz)
-    if caption[end:]:
+    if index == total and caption[end:]:
         p = doc.add_paragraph(style='Caption'); add_inline(p, caption[end:])
         for run in p.runs: run.bold = False
     return layout
@@ -662,7 +729,8 @@ def write_process_lists(process, candidates, layouts):
     (process/'参考文献候选清单.md').write_text('\n'.join(lines)+'\n', encoding='utf-8')
     lines = ['# 表格断行清单', '', '字号与断词为字体测量估算；实际分页和可读性需 Word 复核。', '']
     for layout in layouts:
-        lines += [f'## Table {layout["table"]} — {layout["font_size_pt"]} pt', '']
+        block = f' block {layout["block"]}/{layout["blocks"]}' if 'block' in layout else ''
+        lines += [f'## Table {layout["table"]}{block} — {layout["font_size_pt"]} pt', '']
         if not layout['word_wrap_columns']: lines.append('无估算词内断行。')
         for col in layout['word_wrap_columns']:
             lines.append(f'- 列 {col["column"]}（{col["header"]}）：'+', '.join(col['samples']))

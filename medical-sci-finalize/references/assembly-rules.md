@@ -4,15 +4,21 @@
 
 路径布局以开发任务书 §2 为默认契约：`04_manuscript/{Introduction,Methods,Results,Discussion,Abstract}/<节名>_EN.md`；`Legends/{Figure_Legends,Supplementary_Figure_Legends,Table_Titles_Notes}_EN.md`；核查说明 `*核查说明.md`；根目录口径表、PROJECT、作者决定和冲突台账。主图 `02_figures/out/figures/main/figN.tif`（**优先**；无 tif 时回退 figN.png 并出 WARN），Fig1 可来自 `03_outline/2_Methods/2.2_Architecture/figures/Fig1.tif`，仅在过程目录转 PNG；附图 `supp/sNN.png`；表 `02_figures/out/tables/{TN,STNN}.md`。不跟随 PROJECT/大纲中的外部路径读取或执行代码。
 
-编号根据当前成稿与资产发现，必须连续且图/表/图注集合精确相等；缺图、重复图注、缺表注都阻断，不能静默跳过。验收应覆盖当前成稿的全部资产（示例：主图 1–8、主表 1–2、附图 S1–S12、附表 ST01–ST10）。图注允许 `**Figure 1. Title.** Body` 或 Markdown 标题；表注为 `**Table 1...**`、`**Supplementary Table S1...**`。表文件必须有一张标准 Markdown 表；原始表说明不替代作者确认的表题表注。CSV/TeX 保留只读，不用来擅自重算。
+编号根据当前成稿与资产发现，必须连续且图/表/图注集合精确相等；缺图、重复图注、缺表注都阻断，不能静默跳过。验收应覆盖当前成稿的全部资产（示例：主图 1–8、主表 1–2、附图 S1–S12、附表 ST01–ST10）。图注允许 `**Figure 1. Title.** Body` 或 Markdown 标题；表注为 `**Table 1...**`、`**Supplementary Table S1...**`。表文件必须含至少一个非空标准 Markdown 表格区块；原始表说明不替代作者确认的表题表注。CSV/TeX 保留只读，不用来擅自重算。
+
+表资产以 Markdown 首行（允许前导空白）的 `**Table N.` / `**Supplementary Table SN.` 显示编号为发表键；存在且非空的同名 `.source.json` 中 `presentation_trim.display_number` 必须与显示标题一致。无显示标题才按 TN/STNN 文件名回退；任何重复发表键阻断，不按稳定源文件名重新编号。各区块须有合法表头、分隔行及非空表体；坏行或空区块阻断，不静默丢弃。
 
 ## 组装清单
 
-主稿：四行占位（标题、作者、单位、通讯，无分页符）→ 摘要（Abstract 下连续四段 run-in：加粗 `Background:`/`Methods:`/`Results:`/`Conclusions:` 标签 + 同段正文，段间不空行）→ Keywords → Highlights → Introduction → Methods → Results → Discussion，不输出 References。主图、主表置于首次正文引用所属（子）节末，下一个同级/更高标题之前；同节按首次引用位置混排。图后接完整图注，表题→单表→表注；一级节及资产块边界各一个空段落。所有标题为 Normal + 直接格式，无 Heading/Title 或大纲级别。正文和原始引用格式保持；`Supplementary Table S1` 不得误作主表 `Table 1`。细则见 journal-style.md。
+主稿：四行占位（标题、作者、单位、通讯，无分页符）→ 摘要（Abstract 下连续四段 run-in：加粗 `Background:`/`Methods:`/`Results:`/`Conclusions:` 标签 + 同段正文，段间不空行）→ Keywords → Highlights → Introduction → Methods → Results → Discussion，不输出 References。主图、主表置于首次正文引用所属（子）节末，下一个同级/更高标题之前；同节按首次引用位置混排。图后接完整图注，表题→全部表格区块（块间一个空段）→表注；一级节及资产块边界各一个空段落。所有标题为 Normal + 直接格式，无 Heading/Title 或大纲级别。正文和原始引用格式保持；`Supplementary Table S1` 不得误作主表 `Table 1`。细则见 journal-style.md。
 
-补充材料：Supplementary material 标题 → 附图 S1–S12 按编号自然流式配图注 → 附表 ST01–ST10 按编号配表题表注，每表一个 w:tbl。8→7.5→7→6.5 pt；地板仍超词宽允许词内断行并 WARN。单节 A4 纵向，不强制每图或每表分页。数值和空值照源表保留，空白不改为零。
+补充材料：Supplementary material 标题 → 附图 S1–S12 按编号自然流式配图注 → 附表 ST01–ST10 按编号配表题表注，每个 Markdown 区块一个 w:tbl，同表号共用一次表题表注；各块独立布局并以表号和区块序号记录字号、断行与告警，多块信息含 N blocks。8→7.5→7→6.5 pt；地板仍超词宽允许词内断行并 WARN。单节 A4 纵向，不强制每图或每表分页。数值和空值照源表保留，空白不改为零。
 
 引用标识按正文、图表注首次出现去重，仅输出过程文件 `参考文献候选清单.md`。采用本地核查表已有字段及行级溯源，缺失字段、无记录和未核验逐条标注，不列入成品 WARN。正文保留 PMID/DOI/URL/arXiv，不另编号、不伪造书目或核验。过程文件另有 `表格断行清单.md`，逐表列字号与估算断词列/样例。两份清单均不是投稿正文。
+
+## 表格发表形态提示（仅 WARN）
+
+`check_finalize.py` 读取已组装 DOCX 的表体：列数 >10 或任一单元格 >50 字符时出 WARN，逐表列出表号与列名；长单元格附所在行（表头为第 1 行）和最大长度，空表头用列序号定位。字符数按单元格可见文字（含公式、各段落间换行，去首尾空白）计算，不按 Markdown / XML 标记长度；表格外的表注不计入。恰好 10 列、50 字符不触发。提示按设计规格精简；不截断文字、不删行列、不改变组装或排版、不新增 ERROR，WARN 不改变既有退出码语义。≤40 数据行、近常数 / 可推导列及正文引用仍由设计与写作环节核对，本项不扩展这些检查。
 
 ## 输出、重跑与归档
 

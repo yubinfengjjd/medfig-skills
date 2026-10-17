@@ -17,9 +17,9 @@ description: Use when a complete medical SCI manuscript needs final Word assembl
 
 阅读 [组装规则](references/assembly-rules.md) 和 [Word 版式](references/journal-style.md)。运行 `scripts/build_manuscript.py --project-root <项目根> --kind both --version <N>`。没有 PROJECT.md 时另传 `--output-dir`；有则固定输出 `05_final/`。
 
-运行 `scripts/check_finalize.py --project-root <项目根> --version <N> --report <过程目录>/assembly_check.json`。批次 #10 使用新版本 v7，真实项目旧 v6 的归档由获授权的发布阶段执行，开发只构建隔离副本。默认单节 A4 纵向、Arial 12 pt 单倍行距，无行号及页眉页脚。主图表放在首次正文引用所属（子）节末、下一个同级或更高标题前；同节按首次引用顺序混排。图片满宽 14.6 cm 自然流式；每表一个 Word 表，8→7.5→7→6.5 pt，地板仍超词宽时允许词内断行并 WARN。全部标题用 Normal 段落加直接格式，无 Heading/Title 样式及大纲级别；一级节与资产块间按规则留一个 Arial 12 pt 空段落，详见 Word 版式。
+运行 `scripts/check_finalize.py --project-root <项目根> --version <N> --report <过程目录>/assembly_check.json`。批次 #10 使用新版本 v7，真实项目旧 v6 的归档由获授权的发布阶段执行，开发只构建隔离副本。默认单节 A4 纵向、Arial 12 pt 单倍行距，无行号及页眉页脚。主图表放在首次正文引用所属（子）节末、下一个同级或更高标题前；同节按首次引用顺序混排。图片满宽 14.6 cm 自然流式；表键优先取 Markdown 首行的显示编号，并核对同名 .source.json 的 presentation_trim.display_number；无显示标题才回退文件名，重复编号报错。同一表号可含多个 Markdown 表格区块，共用一次表题表注，区块间一个空段，各块独立布局与记录（含区块序号、N blocks）；单区块保持原输出。8→7.5→7→6.5 pt，地板仍超词宽时允许词内断行并 WARN。全部标题用 Normal 段落加直接格式，无 Heading/Title 样式及大纲级别；一级节与资产块间按规则留一个 Arial 12 pt 空段落，详见 Word 版式。
 
-主稿不输出 References，正文引用标识原样保留。过程目录同时生成 `表格断行清单.md`（逐表字号、断词列与样例）及 `参考文献候选清单.md`（首次出现顺序、已有字段、缺口）；书目缺失与未核验只进入候选清单，不进入成品 WARN。必须实际打开两份 DOCX；可用本机 Word 或渲染器检查自然分页、图片、跨页表、公式及标题块。不得只凭 ZIP/XML 可解析宣称视觉验收通过。ERROR 阻断发布；WARN 逐条登记；候选清单不证明文献已经核验，也不代表投稿就绪。无需改上游即可修复的排版问题在组装脚本中修复。
+主稿不输出 References，正文引用标识原样保留。过程目录同时生成 `表格断行清单.md`（逐表字号、断词列与样例）及 `参考文献候选清单.md`（首次出现顺序、已有字段、缺口）；书目缺失与未核验只进入候选清单，不进入成品 WARN。必须实际打开两份 DOCX；可用本机 Word 或渲染器检查自然分页、图片、跨页表、公式及标题块。不得只凭 ZIP/XML 可解析宣称视觉验收通过。ERROR 阻断发布；WARN 逐条登记；组装检查 JSON 的 `style` 附全稿及逐节风格统计，含主/附图注与表注；直接复用 medpaper-pipeline 的检查函数，缺少依赖时明确报错。统计只读，不在组装时改写源稿。组装检查对列数 >10 或存在 >50 字符单元格的表追加发表形态 WARN，列出表号与列名（长单元格另报行号与长度；表注除外），提示按设计规则精简。此项只读提示，不改源表、组装、排版、原有 ERROR 或退出码语义。候选清单不证明文献已经核验，也不代表投稿就绪。无需改上游即可修复的排版问题在组装脚本中修复。
 
 ## 阶段二：润色、归档、重新组装
 
@@ -34,3 +34,7 @@ description: Use when a complete medical SCI manuscript needs final Word assembl
 7. 用递增版本重新组装与检查两份 Word。更新 PROJECT.md 第 11 行为“已润色，待作者验收”，记录实际版本/路径；仅作者明确验收后才写已确认。作者新增裁决只追加 `作者决定.md` 的 `## Finalize`，不改旧决定。不要将候选建议写成作者决定。
 
 机械检查不证明事实未变、临床有效性、语义等价或期刊特定投稿合规；逐段证据核对、所有不利结果及局限保留、视觉验收与作者裁决均需独立完成。
+
+## 交付前检查
+
+- [ ] 散文分号链 0 处（同句 ≥2 个散文分号为 ERROR，结构性分号豁免）；目标平均 18–28 词/句，一般 ≤45 词、硬上限 60 词，>45 词占比 >10% 为 WARN；无连续 ≥3 个 <8 词短句的电报体连跑；WARN 已逐条说明。连接词按逻辑需要使用，不连续三句以上以同一个连接词或短语开头；按 journal-style 的「句长、分号与衔接」复核。

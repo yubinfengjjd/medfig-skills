@@ -12,6 +12,7 @@ import json
 import re
 import sys
 from pathlib import Path
+from citation_stats import collect as collect_citations, format_report as citation_report
 
 # narrative files only: the outline itself and the manuscript. Per-section evidence copies under
 # 03_outline/<section>/ (captions, tables, code) are upstream records and are fixed at their source.
@@ -183,9 +184,12 @@ def main():
     root = sys.argv[1]
     hits = scan(root)
     warns = check_counts(root)
+    citations = collect_citations(root)
+    warns.extend(citations["warnings"])
     if "--json" in sys.argv:
-        print(json.dumps({"errors": hits, "warnings": warns}, ensure_ascii=False, indent=1))
+        print(json.dumps({"errors": hits, "warnings": warns, "citations": citations}, ensure_ascii=False, indent=1))
     else:
+        print(citation_report(citations))
         for h in hits:
             print(f"{h['file']}:{h['line']}  禁用别名 “{h['alias']}” → 用 “{h['use']}”  …{h['context']}…")
         for w in warns:

@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml/badge.svg)](https://github.com/yubinfengjjd/medfig-skills/actions/workflows/tests.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-面向医学 / 临床 AI 论文的全流程技能：图表侧是七个 medfig 技能和它们依赖的 `scipilot-medimg-figure-skill`；写作侧是七个 `medical-sci-*` 写作技能和把它们串起来的 `medpaper-pipeline`。一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
+面向医学 / 临床 AI 论文的全流程技能：图表侧是七个 medfig 技能和它们依赖的 `scipilot-medimg-figure-skill`；写作侧是八个 `medical-sci-*` 写作技能和把它们串起来的 `medpaper-pipeline`（含投稿前的 Zotero 参考文献注入）；另有科研开题、受管实验与苏格拉底式项目访谈三个技能。一条命令装到 Claude Code 与 Codex 的技能目录后按触发条件自动使用。
 
 | 技能 | 作用 |
 |---|---|
@@ -19,7 +19,7 @@
 
 - 只要一张纯影像网格（已导出的 PNG/JPG/TIF + 掩膜/轮廓/热力图/放大框/比例尺，无统计图混排）→ `scipilot-medimg-figure-skill`。
 - 其他情况：还没有规格 → `medfig-plan`；已有规格、单张图 → `medfig-render`；图表定稿后写作大纲 → `medfig-outline`；示意图 / 架构图 → `medfig-schematic`；参考图 1:1 复刻成矢量 → `medfig-illustrator`；多张图 → `medfig-orchestrate`（内部逐张调用 `medfig-render`）。
-- 写作：从出图一路到 Methods / 图注 / Results / Introduction / Discussion / Abstract 与成品 Word → `medpaper-pipeline`（逐阶段调用写作技能）；只写或修订单节 → 直接调用对应的 `medical-sci-*` 技能。
+- 写作：从出图一路到 Methods / 图注 / Results / Introduction / Discussion / Abstract、成品 Word 与投稿前参考文献 → `medpaper-pipeline`（逐阶段调用写作技能）；只写或修订单节 → 直接调用对应的 `medical-sci-*` 技能。
 
 非医学图表、用代码直接画的示意图不在范围内。
 
@@ -34,7 +34,16 @@
 | `medical-sci-introduction` | Introduction（引用逐条核验 PMID） |
 | `medical-sci-discussion` | Discussion（方法、结果、图注、引言齐备后才动笔） |
 | `medical-sci-abstract` | 摘要（中英对照、关键词、Highlights；默认英文正文 ≤250 词） |
-| `medical-sci-finalize` | 成品 Word 组装（主稿 + 补充材料）与英文全稿保守润色（含去防御性写作） |
+| `medical-sci-finalize` | 成品 Word 组装（主稿 + 补充材料）与英文全稿保守润色（含去防御性写作）；支持同一表号多区块与发表编号映射 |
+| `medical-sci-references` | 投稿前参考文献收尾：从主稿抽取引用标识，按 PMID/DOI/arXiv 查重并补入 Zotero，注入 Word 原生引文字段与文献表，核对 I1–I9 不变式；支持作者提供的 URL→条目映射 |
+
+## 科研与项目管理技能
+
+| 技能 | 作用 |
+|---|---|
+| `medical-research-plan` | 医学与医疗 AI 科研开题：逐轮访谈、文献锚点、数据与伦理可行性、假设反证，产出可交给编程 agent 的研究与工程计划 |
+| `medimg-experiment` | 从研究计划建立 Windows 本地医学影像实验：锁定数据划分与测试集、评价与统计规则、运行预算，经受管控制器训练、监控、恢复与归档 |
+| `socratic-project-manager` | 用苏格拉底式问答把开发项目、研究或复杂想法推进到需求、设计与可执行交接方案 |
 
 ## 前置条件
 
@@ -43,6 +52,7 @@
 - `scipilot-medimg-figure-skill` 已包含在本仓库，由 `install.py` 一起安装，不需要另外下载。
 - 可选：Arial 字体（期刊默认字体；缺失时 matplotlib 回退到 DejaVu Sans 并给出警告）。
 - `medfig-illustrator` 另需：Windows、Adobe Illustrator CC 2019（23.x）或更新版本并已打开目标文档；它的 PowerShell 脚本按 `CELL_LCT_PYTHON` → `py` 启动器 → PATH 上的 `python.exe` 的顺序找 Python（需含 Pillow 与 fontTools）。PATH 上只有 Microsoft Store 占位程序时，请设置用户级环境变量：`[Environment]::SetEnvironmentVariable("CELL_LCT_PYTHON", "<python.exe 的完整路径>", "User")`。
+- `medical-sci-references` 另需：Zotero 10（建议 ≥10.0.5，本地 API 写入）并启用“允许其他应用程序与本机 Zotero 通信”；Word 内需启用 Zotero 插件。缺失时技能会在就绪检查处停下，不会自行启动或修改 Zotero。
 
 ## 安装 / 更新 / 卸载
 
@@ -55,7 +65,7 @@ python install.py
 
 以后更新：`git pull && python install.py --update`。
 
-`install.py` 只用标准库，只复制清单中的技能目录（七个 medfig、`scipilot-medimg-figure-skill`、七个 `medical-sci-*` 写作技能与 `medpaper-pipeline`），并排除 `__pycache__`、`*.pyc`、`.pytest_cache`、`.git` 以及 `examples/**/out`、`examples/**/data` 等生成物。默认目标为 `~/.claude/skills` 和 `~/.codex/skills`。
+`install.py` 只用标准库，只复制清单中的技能目录（七个 medfig、`scipilot-medimg-figure-skill`、八个 `medical-sci-*` 写作技能、`medpaper-pipeline`，以及 `medical-research-plan`、`medimg-experiment`、`socratic-project-manager`），并排除 `__pycache__`、`*.pyc`、`.pytest_cache`、`.git` 以及 `examples/**/out`、`examples/**/data` 等生成物。默认目标为 `~/.claude/skills` 和 `~/.codex/skills`。
 
 ```bash
 python install.py --dry-run          # 只打印计划（复制、备份、目标），不改动任何文件

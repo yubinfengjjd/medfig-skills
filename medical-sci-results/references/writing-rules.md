@@ -49,13 +49,13 @@
 - 不写单独的表格指引句（“Complete values are reported in Supplementary Table S5.”“Cohort-specific results are listed in Table 2.”）。表格引用放进它所支持的结果句末尾的括号，例如 “… fell to 0.802 in Cohort B (Fig. 5A; Table 2).”
 - 只引用实际呈现该结果的 panel：只在源数据或详细图注中出现、成图中没有显示的数值，改引对应表格；表格中也没有时，不写入正文（必要时记入核查说明）。
 - 不复述方法：分析如何实施交给 Methods。正文中允许的方法信息只限于读者理解该数值所必需的分析单位或数据子集，用短语交代，例如 “in seed 0”“at scan level”“in a principal component analysis fitted on internal scans only”。不写评估或指标的定义、选例规则、统计实现（bootstrap 方案、检验的单双侧、推断分组），不写“汇总矩阵包含重复预测”这类图注式说明，也不写 “as described in Methods”。
-- 单句硬上限 55 词，不作例外；篇幅靠增加句子，不靠拉长句子。
+- 句长与分号按 journal-style.md「句长、分号与衔接」执行：目标平均 18–28 词/句，一般 ≤45、硬上限 60；不得通过增加句子数回避必要从句，也不得为凑篇幅拉长句子。
 - 只做单次、单 seed 或单个子集的分析，把口径写进句内（“in seed 0”“in the held-out subset”）；不要让读者以为它是全部分析的结论。
 - 指标基于极少事件（如少于 50 个错误或阳性）时，写出 n；n 太小、单独呈现会误导的，略去该数字或并入定性描述。
 - 同一舍入值代表两个不同的量（如临床组 BACC 与按成分取平均的 BACC 都是 0.948）时，在每个出现处点明口径（“clinical-group”“component-averaged”），不让读者当成同一个数。
 - 同一指标跨队列给出极值时，写出全部极值（“lowest in UMN (0.79) and Cohort B (0.80)”），不只写其一，否则读者会误读为唯一最低。
 - 不写内部标识：数据字段名、文件名、运行编号、标签版本号、代码中的规则名等，改为科学名称或描述性说法（参照 Methods 稿的术语）。
-- 过渡靠内容衔接：不使用 First、Second、Then、Next、Finally、Moreover、Furthermore、In addition、Additionally 作为句首连接词串联结果。改用承接内容的主语或从句，如 “This decline was confined to …”“Among the external cohorts, …”“Consistent with this, …”（后者全文少用）。中文同样避免“首先、其次、然后、此外、另外”的串联。
+- 过渡靠内容衔接：不用 First、Second、Then、Next、Finally 作为机械路标；Moreover、Furthermore、In addition、Additionally 等按逻辑需要使用，不为凑数堆砌，不连续三句以上以同一个连接词或短语开头。改用承接内容的主语或从句，如 “This decline was confined to …”“Among the external cohorts, …”“Consistent with this, …”（后者全文少用）。中文同样避免“首先、其次、然后”的机械路标，“此外、另外”等按逻辑需要使用。
 - 句式变化服务于信息组织，术语全文稳定，不靠同义词轮换制造变化。
 
 ## 5. 解读边界

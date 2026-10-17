@@ -1,0 +1,4 @@
+interface:
+  display_name: "苏格拉底项目经理"
+  short_description: "用通俗的逐轮追问厘清开发项目与科研课题，保存决策并形成可执行方案"
+  default_prompt: "请使用 $socratic-project-manager 担任我的项目经理，每轮用通俗语言问我2至3个问题，深入澄清需求与风险，保存进度，最终交付可执行、可验收的完整方案。"
